@@ -13,6 +13,8 @@ interface AuthValue {
   employees: PublicEmployee[];
   ready: boolean;
   isManager: boolean;
+  /** managers and the people a manager allowed to edit the inventory list */
+  canEditInventory: boolean;
   login(employeeId: string, pin: string): Promise<LoginResult>;
   logout(): void;
   /** false = the server refused the PIN (must be 4 digits, not 0000). */
@@ -22,6 +24,7 @@ interface AuthValue {
   setRole(id: string, role: Role): Promise<ActionResult>;
   resetPin(id: string): Promise<ActionResult>;
   removeEmployee(id: string): Promise<ActionResult>;
+  setInventoryEditor(id: string, value: boolean): Promise<ActionResult>;
 }
 
 const Ctx = createContext<AuthValue | null>(null);
@@ -112,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       employees,
       ready,
       isManager: user?.role === 'manager',
+      canEditInventory: user?.role === 'manager' || user?.inventoryEditor === true,
       login,
       logout: () => {
         void api.logout();
@@ -127,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole: (id, role) => afterAdmin(api.setRole(id, role)),
       resetPin: (id) => afterAdmin(api.resetPin(id)),
       removeEmployee: (id) => afterAdmin(api.remove(id)),
+      setInventoryEditor: (id, value) => afterAdmin(api.setInventoryEditor(id, value)),
     }),
     [user, employees, ready, login, changePin, afterAdmin, applyUser, refresh],
   );

@@ -945,3 +945,62 @@ code {
     font-size: 1.2rem;
   }
 }
+
+/* inventory */
+h3.cat {
+  margin: 0.9rem 0 0.3rem;
+  font-size: 1rem;
+  color: var(--yellow);
+}
+.li.inv .li-body {
+  gap: 0.35rem;
+}
+.inv-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.inv-seg {
+  margin: 0.2rem 0;
+}
+.inv-extra {
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.inv-pic {
+  max-width: 100%;
+  border-radius: 10px;
+}
+.inv-note {
+  width: 100%;
+}
+.inv-admin-row {
+  align-items: center;
+  flex-wrap: wrap;
+}
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+button.linklike {
+  border: 0;
+  background: none;
+  text-align: start;
+  padding: 0;
+  min-height: 0;
+  color: inherit;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+.li.off {
+  opacity: 0.55;
+}
+
+/* six tabs on the narrowest phones */
+@media (max-width: 360px) {
+  .tabbar a {
+    font-size: 0.7rem;
+  }
+}

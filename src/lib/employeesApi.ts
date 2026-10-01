@@ -23,6 +23,7 @@ export interface EmployeeApi {
   setRole(id: string, role: Role): Promise<ActionResult>;
   resetPin(id: string): Promise<ActionResult>;
   remove(id: string): Promise<ActionResult>;
+  setInventoryEditor(id: string, value: boolean): Promise<ActionResult>;
   subscribe(fn: () => void): () => void;
 }
 
@@ -83,6 +84,7 @@ function sharedApi(): EmployeeApi {
     setRole: (id, role) => rpc<ActionResult>('api_set_role', { p_id: id, p_role: role }),
     resetPin: (id) => rpc<ActionResult>('api_reset_pin', { p_id: id }),
     remove: (id) => rpc<ActionResult>('api_remove_employee', { p_id: id }),
+    setInventoryEditor: (id, value) => rpc<ActionResult>('api_set_inventory_editor', { p_id: id, p_value: value }),
     subscribe: poll,
   };
 }
@@ -92,11 +94,12 @@ function sharedApi(): EmployeeApi {
 const SESSION_KEY = 'drix:session';
 const COL = 'employees';
 
-const publicOf = ({ id, name, role, mustChangePin, createdAt }: Employee): PublicEmployee => ({
+const publicOf = ({ id, name, role, mustChangePin, inventoryEditor, createdAt }: Employee): PublicEmployee => ({
   id,
   name,
   role,
   mustChangePin,
+  inventoryEditor,
   createdAt,
 });
 
@@ -187,6 +190,12 @@ function localApi(): EmployeeApi {
       if (id === sessionId()) return { ok: false, reason: 'self' };
       if (e.role === 'manager' && managers(list) <= 1) return { ok: false, reason: 'last_manager' };
       await backend.remove(COL, id);
+      return { ok: true };
+    },
+    async setInventoryEditor(id, value) {
+      const e = (await all()).find((x) => x.id === id);
+      if (!e) return { ok: false, reason: 'invalid' };
+      await backend.upsert(COL, { ...e, inventoryEditor: value });
       return { ok: true };
     },
     subscribe: (fn) => backend.subscribe(COL, fn),

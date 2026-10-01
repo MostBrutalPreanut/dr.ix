@@ -15,10 +15,12 @@ import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminChecklists from './pages/admin/AdminChecklists';
 import AdminTasks from './pages/admin/AdminTasks';
 import AdminWix from './pages/admin/AdminWix';
+import AdminInventory from './pages/admin/AdminInventory';
+import InventoryPage from './pages/InventoryPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 function Gate() {
-  const { user, isManager } = useAuth();
+  const { user, isManager, canEditInventory } = useAuth();
   if (!user) return <Login />;
   if (user.mustChangePin) return <FirstLogin />;
   return (
@@ -27,13 +29,19 @@ function Gate() {
         <Route index element={<Today />} />
         <Route path="checklist/:id" element={<ChecklistPage />} />
         <Route path="reservations" element={<ReservationsPage />} />
+        <Route path="inventory" element={<InventoryPage />} />
         <Route path="handbook" element={<HandbookList />} />
         <Route path="handbook/:id" element={<HandbookSectionPage />} />
         <Route path="games" element={<Games />} />
         <Route path="profile" element={<Profile />} />
-        {isManager && (
+        {canEditInventory && (
           <>
             <Route path="admin" element={<AdminHome />} />
+            <Route path="admin/inventory" element={<AdminInventory />} />
+          </>
+        )}
+        {isManager && (
+          <>
             <Route path="admin/notes" element={<AdminNotes />} />
             <Route path="admin/employees" element={<AdminEmployees />} />
             <Route path="admin/checklists" element={<AdminChecklists />} />

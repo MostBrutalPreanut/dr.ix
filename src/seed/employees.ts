@@ -23,6 +23,7 @@ export async function seedEmployees(): Promise<Employee[]> {
       role,
       pinHash: await hashPin(id, DEFAULT_PIN),
       mustChangePin: true,
+      inventoryEditor: id === 'gaia',
       createdAt,
     })),
   );

@@ -13,7 +13,7 @@ const REASON: Record<string, string> = {
 };
 
 export default function AdminEmployees() {
-  const { employees, user, addEmployee, setRole: changeRole, resetPin, removeEmployee } = useAuth();
+  const { employees, user, addEmployee, setRole: changeRole, resetPin, removeEmployee, setInventoryEditor } = useAuth();
   const [name, setName] = useState('');
   const [role, setRole] = useState<Role>('staff');
   const [msg, setMsg] = useState('');
@@ -77,6 +77,7 @@ export default function AdminEmployees() {
                   <strong>{e.name}</strong> {isMe && <span className="muted small-text">(אני)</span>}
                   <span className="muted small-text block">
                     {e.role === 'manager' ? 'מנהל' : 'עובד'}
+                    {e.role === 'staff' && e.inventoryEditor && ' · עורך/ת מלאי'}
                     {e.mustChangePin && ' · עוד לא בחר/ה קוד אישי'}
                   </span>
                 </span>
@@ -90,6 +91,15 @@ export default function AdminEmployees() {
                   >
                     {e.role === 'manager' ? 'הפוך לעובד' : 'הפוך למנהל'}
                   </button>
+                  {e.role === 'staff' && (
+                    <button
+                      type="button"
+                      className="small"
+                      onClick={() => void run(setInventoryEditor(e.id, !e.inventoryEditor))}
+                    >
+                      {e.inventoryEditor ? 'בטל עריכת מלאי' : 'אפשר עריכת מלאי'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="small"

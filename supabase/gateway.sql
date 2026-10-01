@@ -35,6 +35,9 @@ create table if not exists public.employees (
   created_at       timestamptz not null default now()
 );
 
+-- Upgrade for existing installs: a person who may edit the inventory list (besides managers).
+alter table public.employees add column if not exists inventory_editor boolean not null default false;
+
 create table if not exists public.sessions (
   token_hash   text primary key,
   employee_id  text not null references public.employees (id) on delete cascade,
@@ -44,12 +47,16 @@ create table if not exists public.sessions (
 
 -- Which role may read / write each collection.
 --   read_role : 'any' (every signed-in employee) | 'manager'
---   write_role: 'any' | 'manager' | 'self' (only documents that belong to you: employeeId = you)
+--   write_role: 'any' | 'manager' | 'inventory' (manager or inventory editor) | 'self' (only your own documents)
 create table if not exists public.acl (
   collection text primary key,
   read_role  text not null check (read_role in ('any', 'manager')),
   write_role text not null check (write_role in ('any', 'manager', 'self'))
 );
+-- (re-created below so that an existing table accepts the new 'inventory' role)
+alter table public.acl drop constraint if exists acl_write_role_check;
+alter table public.acl add constraint acl_write_role_check
+  check (write_role in ('any', 'manager', 'self', 'inventory'));
 
 insert into public.acl (collection, read_role, write_role) values
   ('notes',           'any',     'manager'),
@@ -62,7 +69,10 @@ insert into public.acl (collection, read_role, write_role) values
   ('handbook',        'any',     'manager'),
   ('games',           'any',     'manager'),
   ('settings',        'any',     'manager'),
-  ('meta',            'manager', 'manager')
+  ('meta',            'manager', 'manager'),
+  ('inventoryItems',   'any',    'inventory'),
+  ('inventoryReports', 'any',    'any'),
+  ('inventoryPhotos',  'any',    'any')
 on conflict (collection) do nothing;
 
 -- ---------- lock the tables: only the functions below can touch them ---------------
@@ -95,6 +105,20 @@ insert into public.employees (id, name, role, pin_hash) values
   ('tomer',  'תומר',   'staff',   extensions.crypt('0000', extensions.gen_salt('bf')))
 on conflict (id) do nothing;
 
+-- One-time migrations (each runs once, so a manager's later changes are never overwritten).
+create table if not exists public.migrations (name text primary key, ran_at timestamptz not null default now());
+alter table public.migrations enable row level security;
+revoke all on public.migrations from anon, authenticated;
+
+do $fn$
+begin
+  if not exists (select 1 from public.migrations where name = 'gaia-inventory-editor') then
+    update public.employees set inventory_editor = true where id = 'gaia';
+    insert into public.migrations (name) values ('gaia-inventory-editor');
+  end if;
+end;
+$fn$;
+
 -- ---------- internal helper: who is calling? ---------------------------------------
 
 create or replace function public._auth(p_token text)
@@ -125,7 +149,7 @@ immutable
 as $fn$
   select jsonb_build_object(
     'id', e.id, 'name', e.name, 'role', e.role,
-    'mustChangePin', e.must_change_pin, 'createdAt', e.created_at);
+    'mustChangePin', e.must_change_pin, 'inventoryEditor', e.inventory_editor, 'createdAt', e.created_at);
 $fn$;
 
 -- ---------- sign in / out ----------------------------------------------------------
@@ -296,6 +320,21 @@ begin
 end;
 $fn$;
 
+create or replace function public.api_set_inventory_editor(p_token text, p_id text, p_value boolean)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $fn$
+declare
+  e public.employees := public._auth(p_token);
+begin
+  if e.role <> 'manager' then raise exception 'forbidden'; end if;
+  update public.employees set inventory_editor = coalesce(p_value, false) where id = p_id;
+  return jsonb_build_object('ok', true);
+end;
+$fn$;
+
 create or replace function public.api_reset_pin(p_token text, p_id text)
 returns jsonb
 language plpgsql
@@ -380,6 +419,7 @@ begin
   select * into a from public.acl where collection = p_collection;
   if not found then raise exception 'forbidden'; end if;
   if a.write_role = 'manager' and e.role <> 'manager' then raise exception 'forbidden'; end if;
+  if a.write_role = 'inventory' and e.role <> 'manager' and not e.inventory_editor then raise exception 'forbidden'; end if;
   if a.write_role = 'self' and coalesce(p_doc ->> 'employeeId', '') <> e.id then
     raise exception 'forbidden';
   end if;
@@ -408,6 +448,7 @@ begin
   select * into a from public.acl where collection = p_collection;
   if not found then raise exception 'forbidden'; end if;
   if a.write_role = 'manager' and e.role <> 'manager' then raise exception 'forbidden'; end if;
+  if a.write_role = 'inventory' and e.role <> 'manager' and not e.inventory_editor then raise exception 'forbidden'; end if;
   if a.write_role = 'self' and e.role <> 'manager' then
     select data ->> 'employeeId' into owner from public.docs where collection = p_collection and id = p_id;
     if owner is distinct from e.id then raise exception 'forbidden'; end if;
@@ -431,6 +472,7 @@ grant execute on function
   public.api_add_employee(text, text, text),
   public.api_set_role(text, text, text),
   public.api_reset_pin(text, text),
+  public.api_set_inventory_editor(text, text, boolean),
   public.api_remove_employee(text, text),
   public.api_list(text, text, text, text),
   public.api_upsert(text, text, jsonb),

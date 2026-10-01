@@ -9,6 +9,7 @@ export interface Employee extends Doc {
   role: Role;
   pinHash: string;
   mustChangePin: boolean;
+  inventoryEditor?: boolean;
   createdAt: string;
 }
 
@@ -19,6 +20,8 @@ export interface PublicEmployee {
   role: Role;
   /** Only known after sign-in. */
   mustChangePin?: boolean;
+  /** May edit the inventory list although not a manager. */
+  inventoryEditor?: boolean;
   createdAt?: string;
 }
 
@@ -148,4 +151,64 @@ export interface Settings extends Doc {
   biweeklyAnchor: string;
   /** First day the app was in use - tasks before it are never shown as late. */
   startDate?: string;
+}
+
+// ---------- inventory ----------
+
+export type StockLevel = 'ok' | 'low' | 'out';
+
+export const LEVEL_LABEL: Record<StockLevel, string> = {
+  ok: 'מספיק',
+  low: 'מעט',
+  out: 'נגמר',
+};
+
+/**
+ * How an item is reported:
+ *  - status: enough / low / out
+ *  - count : a number (with an optional unit and a "low" threshold)
+ *  - photo : only a photo is asked for ("please photograph the back fridge")
+ */
+export type InventoryMode = 'status' | 'count' | 'photo';
+
+export interface InventoryItem extends Doc {
+  name: string;
+  category: string;
+  mode: InventoryMode;
+  /** count mode: what is counted ("crates", "bags") */
+  unit?: string;
+  /** count mode: at or below this amount the item counts as low (0 is always "out") */
+  min?: number;
+  /** weekdays (0 = Sunday) on which it is checked; empty = every day */
+  days: number[];
+  /** shown under the name, e.g. "more than 5 sleeves" */
+  hint?: string;
+  /** also ask for a photo */
+  photo?: boolean;
+  active: boolean;
+  order: number;
+}
+
+/** One answer for one item on one business day. id = `${date}|${itemId}` */
+export interface InventoryReport extends Doc {
+  date: string;
+  itemId: string;
+  level?: StockLevel;
+  count?: number;
+  note?: string;
+  /** a photo for this answer exists (the picture itself is loaded on demand) */
+  photo?: boolean;
+  /** somebody bought it - overrides a low / out answer */
+  restocked?: boolean;
+  by: string;
+  at: string;
+}
+
+/** id = `${date}|${itemId}` - kept apart from the report so lists stay small */
+export interface InventoryPhoto extends Doc {
+  date: string;
+  itemId: string;
+  dataUrl: string;
+  by: string;
+  at: string;
 }

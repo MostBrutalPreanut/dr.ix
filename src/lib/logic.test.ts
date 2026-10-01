@@ -162,3 +162,85 @@ describe('recommend', () => {
     expect(r.find((g) => g.id === '4')).toBeUndefined();
   });
 });
+
+import { categoriesOf, formatRestockList, isDueOn, latestReports, levelOf, moveItem, parseBulk, restockList } from './inventory';
+import type { InventoryItem, InventoryReport } from './types';
+
+const item = (over: Partial<InventoryItem>): InventoryItem => ({
+  id: 'i', name: 'חלב', category: 'מקרר', mode: 'status', days: [], active: true, order: 10, ...over,
+});
+const rep = (over: Partial<InventoryReport>): InventoryReport => ({
+  id: 'r', date: '2026-10-01', itemId: 'i', by: 'e', at: '2026-10-01T10:00:00Z', ...over,
+});
+
+describe('inventory', () => {
+  it('asks about an item on its days only (no days = every day, inactive = never)', () => {
+    expect(isDueOn(item({}), 3)).toBe(true);
+    expect(isDueOn(item({ days: [6] }), 6)).toBe(true);
+    expect(isDueOn(item({ days: [6] }), 5)).toBe(false);
+    expect(isDueOn(item({ active: false }), 3)).toBe(false);
+  });
+
+  it('reads the level from a status answer or a count', () => {
+    expect(levelOf(item({}), rep({ level: 'low' }))).toBe('low');
+    expect(levelOf(item({}), undefined)).toBeUndefined();
+    const counted = item({ mode: 'count', min: 2 });
+    expect(levelOf(counted, rep({ count: 0 }))).toBe('out');
+    expect(levelOf(counted, rep({ count: 2 }))).toBe('low');
+    expect(levelOf(counted, rep({ count: 3 }))).toBe('ok');
+    expect(levelOf(item({ mode: 'count' }), rep({ count: 1 }))).toBe('ok'); // no minimum set: only 0 is a problem
+    expect(levelOf(item({}), rep({ level: 'out', restocked: true }))).toBe('ok'); // bought since
+  });
+
+  it('keeps the newest answer per item', () => {
+    const latest = latestReports([
+      rep({ id: 'a', date: '2026-09-28', level: 'out' }),
+      rep({ id: 'b', date: '2026-10-01', at: '2026-10-01T09:00:00Z', level: 'low' }),
+      rep({ id: 'c', date: '2026-10-01', at: '2026-10-01T18:00:00Z', level: 'ok' }),
+    ]);
+    expect(latest.get('i')?.id).toBe('c');
+  });
+
+  it('builds the shopping list: out before low, never reported / fine / inactive items left out', () => {
+    const items = [
+      item({ id: 'a', name: 'א', order: 10 }),
+      item({ id: 'b', name: 'ב', order: 20 }),
+      item({ id: 'c', name: 'ג', order: 30 }),
+      item({ id: 'd', name: 'ד', order: 40, active: false }),
+      item({ id: 'e', name: 'ה', order: 50 }),
+    ];
+    const latest = latestReports([
+      rep({ id: '1', itemId: 'a', level: 'low' }),
+      rep({ id: '2', itemId: 'b', level: 'out', date: '2026-09-29' }),
+      rep({ id: '3', itemId: 'c', level: 'ok' }),
+      rep({ id: '4', itemId: 'd', level: 'out' }),
+    ]);
+    const lines = restockList(items, latest, '2026-10-01');
+    expect(lines.map((l) => `${l.item.name}:${l.level}:${l.ageDays}`)).toEqual(['ב:out:2', 'א:low:0']);
+    const text = formatRestockList(lines, '1.10');
+    expect(text).toContain('• ב (נגמר)');
+    expect(text).toContain('• א (מעט)');
+    expect(formatRestockList([], '1.10')).toContain('אין חוסרים');
+  });
+
+  it('shows counts with their unit in the shopping list', () => {
+    const it = item({ id: 'k', name: 'חביות', mode: 'count', unit: 'חביות' });
+    const lines = restockList([it], latestReports([rep({ itemId: 'k', count: 0 })]), '2026-10-01');
+    expect(formatRestockList(lines, 'x')).toContain('• חביות (0 חביות)');
+  });
+
+  it('orders categories by their first item and swaps neighbours', () => {
+    const items = [item({ id: 'a', category: 'ב', order: 20 }), item({ id: 'b', category: 'א', order: 10 }), item({ id: 'c', category: 'ב', order: 30 })];
+    expect(categoriesOf(items)).toEqual(['א', 'ב']);
+    const swapped = moveItem(items, 'c', -1);
+    expect(swapped.map((i) => `${i.id}:${i.order}`).sort()).toEqual(['a:30', 'c:20']);
+    expect(moveItem(items, 'a', -1)).toEqual([]); // already first in its category
+  });
+
+  it('adds items from pasted lines, skipping blanks, bullets and duplicates', () => {
+    let n = 0;
+    const out = parseBulk('חלב\n\n - גבינה \n• קפה\nחלב', { category: 'מקרר', mode: 'status', days: [] }, [item({ name: 'קפה', order: 90 })], () => `n${++n}`);
+    expect(out.map((i) => i.name)).toEqual(['חלב', 'גבינה']);
+    expect(out.map((i) => i.order)).toEqual([91, 92]);
+  });
+});

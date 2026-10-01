@@ -11,7 +11,7 @@ export function Logo({ size = 40, className = '' }: { size?: number; className?:
 }
 
 export function Layout() {
-  const { user, isManager } = useAuth();
+  const { user, canEditInventory } = useAuth();
   const { pathname } = useLocation();
   const connection = useConnection();
   // a new screen always starts at the top (the header is sticky, so a kept scroll position would hide the title)
@@ -44,6 +44,10 @@ export function Layout() {
               <span>הזמנות</span>
             </NavLink>
           )}
+          <NavLink to="/inventory">
+            <span className="ico">📦</span>
+            <span>מלאי</span>
+          </NavLink>
           <NavLink to="/handbook">
             <span className="ico">📖</span>
             <span>נהלים</span>
@@ -52,7 +56,7 @@ export function Layout() {
             <span className="ico">🎲</span>
             <span>משחקים</span>
           </NavLink>
-          {isManager && (
+          {canEditInventory && (
             <NavLink to="/admin">
               <span className="ico">⚙️</span>
               <span>ניהול</span>

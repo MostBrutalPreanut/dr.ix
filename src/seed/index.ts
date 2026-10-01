@@ -1,5 +1,6 @@
 import { backend, seedIfEmpty } from '../lib/db';
 import { seedChecklists } from './checklists';
+import { seedInventory } from './inventory';
 import { seedGames } from './games';
 import { seedSettings, seedTasks } from './tasks';
 import { seedHandbook } from '../lib/handbook';
@@ -16,6 +17,7 @@ export async function seedAll(): Promise<void> {
     ['checklists', seedChecklists],
     ['tasks', seedTasks],
     ['settings', seedSettings],
+    ['inventoryItems', seedInventory],
   ];
   for (const [name, seed] of jobs) {
     await seedIfEmpty(name, await backend.list(name), seed);
