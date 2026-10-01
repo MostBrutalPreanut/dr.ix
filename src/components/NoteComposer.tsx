@@ -36,7 +36,7 @@ export function NoteComposer({ date, onDone }: { date: string; onDone?: () => vo
   }
 
   return (
-    <form className="card form" onSubmit={(e) => void submit(e)}>
+    <form className="card form composer" onSubmit={(e) => void submit(e)}>
       <label>
         הערה למשמרת
         <textarea
@@ -46,7 +46,7 @@ export function NoteComposer({ date, onDone }: { date: string; onDone?: () => vo
           placeholder="למשל: לחבר שולחנות 4 ו-5 לשעה 19:00, לסדר את החדר הפרטי, להכין תוספות פיצה אקסטרה…"
         />
       </label>
-      <div className="row">
+      <div className="field-row">
         <label className="inline">
           למי?
           <select value={area} onChange={(e) => setArea(e.target.value as Area)}>
@@ -57,14 +57,18 @@ export function NoteComposer({ date, onDone }: { date: string; onDone?: () => vo
             ))}
           </select>
         </label>
-        <label className="inline check">
-          <input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} />
-          דחוף
-        </label>
-        <button type="submit" className="primary" disabled={busy || !text.trim()}>
-          פרסם
+        <button
+          type="button"
+          className={`chip pick${urgent ? ' on' : ''}`}
+          aria-pressed={urgent}
+          onClick={() => setUrgent((u) => !u)}
+        >
+          🚨 דחוף
         </button>
       </div>
+      <button type="submit" className="primary" disabled={busy || !text.trim()}>
+        פרסם
+      </button>
     </form>
   );
 }

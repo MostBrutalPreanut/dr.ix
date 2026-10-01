@@ -1,14 +1,10 @@
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { isShared } from '../lib/db';
+import logoUrl from '../assets/logo.png';
 
-export function Logo({ size = 40 }: { size?: number }) {
-  return (
-    <div className="logo" style={{ width: size, height: size, fontSize: size * 0.36 }} aria-label="DR IX">
-      <span>DR</span>
-      <span>IX</span>
-    </div>
-  );
+export function Logo({ size = 40, className = '' }: { size?: number; className?: string }) {
+  return <img src={logoUrl} width={size} height={size} alt="DR IX" className={className} />;
 }
 
 export function Layout() {

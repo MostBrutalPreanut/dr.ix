@@ -8,15 +8,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      includeAssets: ['logo.png'],
       manifest: {
         name: 'דריקס OS',
         short_name: 'דריקס',
         description: 'ניהול משמרות, נהלים, משחקים וטיפים - דריקס חיפה',
         lang: 'he',
         dir: 'rtl',
-        theme_color: '#36366b',
-        background_color: '#ffffff',
+        theme_color: '#151517',
+        background_color: '#151517',
         display: 'standalone',
         start_url: './',
         icons: [

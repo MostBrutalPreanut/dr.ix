@@ -58,7 +58,7 @@ export default function Login() {
 
   return (
     <div className="login">
-      <Logo size={72} />
+      <Logo size={96} className="logo-big" />
       <h1>דריקס OS</h1>
       {!ready ? (
         <p className="muted">טוען…</p>
