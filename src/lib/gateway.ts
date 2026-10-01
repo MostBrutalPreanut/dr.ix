@@ -2,8 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getToken, notifyUnauthorized } from './session';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+export const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const url = supabaseUrl;
+const anonKey = supabaseKey;
 
 /** True when the app talks to the shared server; false = single-device demo mode. */
 export const isShared = Boolean(url && anonKey);
@@ -29,11 +31,11 @@ export async function rpc<T>(fn: string, args: Record<string, unknown> = {}, sig
 /** Refresh interval for shared data. Also refreshes right away when the app comes back to the foreground. */
 const POLL_MS = 10_000;
 
-export function poll(fn: () => void): () => void {
+export function poll(fn: () => void, ms: number = POLL_MS): () => void {
   const tick = () => {
     if (document.visibilityState === 'visible') fn();
   };
-  const timer = setInterval(tick, POLL_MS);
+  const timer = setInterval(tick, ms);
   document.addEventListener('visibilitychange', tick);
   return () => {
     clearInterval(timer);

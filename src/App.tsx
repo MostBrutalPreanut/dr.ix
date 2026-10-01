@@ -13,6 +13,7 @@ import AdminNotes from './pages/admin/AdminNotes';
 import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminChecklists from './pages/admin/AdminChecklists';
 import AdminTasks from './pages/admin/AdminTasks';
+import AdminWix from './pages/admin/AdminWix';
 
 function Gate() {
   const { user, isManager } = useAuth();
@@ -34,6 +35,7 @@ function Gate() {
             <Route path="admin/employees" element={<AdminEmployees />} />
             <Route path="admin/checklists" element={<AdminChecklists />} />
             <Route path="admin/tasks" element={<AdminTasks />} />
+            <Route path="admin/wix" element={<AdminWix />} />
           </>
         )}
         <Route path="*" element={<Navigate to="/" replace />} />

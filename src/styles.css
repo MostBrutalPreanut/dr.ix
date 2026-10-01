@@ -829,3 +829,54 @@ button,
 .note-text {
   overflow-wrap: anywhere;
 }
+
+/* reservations */
+.reservation {
+  padding: 0.6rem 0.9rem;
+}
+.reservation.has-note {
+  border-inline-start: 5px solid var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 8%, var(--card));
+}
+.reservation.quiet {
+  opacity: 0.6;
+}
+.res-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+.res-time {
+  font-size: 1.15rem;
+  color: var(--yellow);
+}
+.res-name {
+  font-weight: 700;
+}
+.res-note {
+  margin: 0.4rem 0 0;
+  font-size: 1.02rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.res-note.team {
+  color: var(--blue);
+}
+.mono-box {
+  direction: ltr;
+  text-align: left;
+  overflow-x: auto;
+  background: var(--soft);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+code {
+  direction: ltr;
+  background: var(--soft);
+  padding: 0 0.3rem;
+  border-radius: 6px;
+}

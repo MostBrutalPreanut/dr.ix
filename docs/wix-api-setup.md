@@ -79,23 +79,45 @@ curl -X POST 'https://www.wixapis.com/table-reservations/reservations/v1/reserva
 ההזמנות שיש בהן הערה יודגשו במסך "היום", ויופיעו גם כהתראה בראש הדף.
 בכוונה לא נציג טלפון או מייל של הלקוח.
 
-## מה אני צריך ממכם
+## הפעלה בפועל: להעלות את הפונקציה ל-Supabase (כ-8 דקות, בלי טרמינל)
 
-- ✅ **Site ID:** `3cba2a0c-6a93-489c-bdd5-700e5e07cba5` (התקבל).
-- ✅ אושר: משתמשים ב-**Table Reservations** וב-**Events**.
-- ✅ צילום של הזמנה אמיתית התקבל. ההערה היא שדה מותאם "הערות" ב-Additional details.
-- ⏳ **בדיקת מבנה (שלב 5 למעלה):** להריץ את הפקודה עם הסינון שבהמשך ולהדביק את התוצאה, כדי לראות איך השדה "הערות" מגיע ב-API.
-- ⏳ **המפתח:** לא לשלוח. נכניס אותו ל-Supabase Secrets אחרי שיהיה שער מאובטח ([security.md](security.md)).
+הפונקציה `wix` היא החלק בשרת שמחזיק את המפתח וקורא את ההזמנות. הקוד שלה נמצא בקובץ
+[`supabase/functions/wix/index.ts`](../supabase/functions/wix/index.ts).
 
-### פקודת בדיקה שמדפיסה רק הערות, בלי שמות וטלפונים
+**1. יצירת הפונקציה**
+1. ב-Supabase, בתפריט הצד: **Edge Functions**.
+2. **Deploy a new function** ← **Via Editor** (יצירה בעורך).
+3. בשם הפונקציה כותבים בדיוק: `wix`.
+4. מוחקים את קוד הדוגמה שבעורך, ומדביקים את כל הקוד מהקישור הזה (Ctrl+A ואז Ctrl+C בדף שנפתח):
+   https://raw.githubusercontent.com/MostBrutalPreanut/dr.ix/claude/gallant-heisenberg-7j9btf/supabase/functions/wix/index.ts
+5. **Deploy**.
 
-```bash
-curl -s -X POST 'https://www.wixapis.com/table-reservations/reservations/v1/reservations/query' \
-  -H 'Authorization: <ה-API KEY>' -H 'wix-site-id: 3cba2a0c-6a93-489c-bdd5-700e5e07cba5' \
-  -H 'Content-Type: application/json' \
-  -d '{"query":{"cursorPaging":{"limit":20},"sort":[{"fieldName":"details.startDate","order":"DESC"}]}}' \
-  | python3 -c "import sys,json; [print({'team':r.get('teamMessage'),'custom':r.get('reservee',{}).get('customFields'),'ext':r.get('extendedFields')}) for r in json.load(sys.stdin).get('reservations',[])]"
-```
+**2. לכבות את "Verify JWT"** (חשוב, אחרת הפונקציה תחזיר 401)
+- בעמוד הפונקציה `wix` ← הגדרות/Details ← המתג **Verify JWT** ← כבוי ← שמירה.
+- הכניסה שלנו נבדקת בתוך הפונקציה מול השער, ולא על ידי Supabase.
+
+**3. להדביק את מפתח ה-API של Wix כסוד**
+1. **Edge Functions** ← **Secrets** (או **Project Settings** ← **Edge Functions** ← **Secrets**).
+2. **Add new secret**. שם: `WIX_API_KEY`. ערך: המפתח שיצרת ב-Wix (שלב 3 למעלה). **שמירה.**
+3. את המפתח מדביקים רק כאן. לא בצ'אט, ולא בקוד.
+4. אין צורך להגדיר כתובת של Supabase. היא נוספת אוטומטית. מזהה האתר של Wix כבר בקוד, ואפשר לשנות אותו עם סוד `WIX_SITE_ID`.
+
+**4. בדיקה**
+- באפליקציה: **ניהול** ← **חיבור Wix** ← **בדוק חיבור**.
+- 🟢 "מחובר" ובו מספר ההזמנות של היום: הכול עובד, והזמנות מופיעות במסך "היום" לכל העובדים.
+- 🟡 "עוד לא הוגדר": הפונקציה לא הועלתה בשם `wix`, או שחסר הסוד.
+- 🔴 "Wix דחתה את המפתח": חסרה הרשאה (שלב 4 למעלה) או שהמפתח בוטל. יוצרים מפתח חדש ומחליפים את הסוד.
+- 🔴 "אי אפשר להגיע לפונקציה": בדרך כלל Verify JWT עדיין דלוק (שלב 2).
+
+**5. איפה ההערה של הלקוח?**
+בעמוד הבדיקה מופיעה רשימת **שדות הטופס** שנמצאו בהזמנות, עם דוגמאות. מהצילום ששלחת, ההערה של לקוח נכתבת בשדה "הערות" תחת **Additional details**. האפליקציה מציגה כל שדה טקסט מלא בטופס (חוץ מערכים כמו "כן/לא") בתור הערה, ובנוסף את **Team notes** כהערת צוות. אם יופיעו שדות שלא רצית להציג כהערה, שלח צילום של עמוד הבדיקה ואסנן אותם.
+
+## מה האפליקציה לא עושה
+- היא **לא משנה** שום דבר ב-Wix. רק קוראת.
+- היא לא שולחת לעובדים טלפון, מייל או שם משפחה של לקוח.
+- הרשימה מתרענת כל דקה ובחזרה לאפליקציה, והשרת שומר תשובה 30 שניות כדי לא להעמיס על Wix.
+- הזמנות מבוטלות, שנדחו או בהמתנה לתשלום לא מוצגות.
+- אירועים וכרטיסים (Events) יצטרפו בשלב הבא.
 
 ## מקורות
 
