@@ -15,8 +15,11 @@ export default function Profile() {
       setError('');
       setMode('second');
     } else if (pin === first) {
-      await changePin(pin);
-      setMode('done');
+      if (await changePin(pin)) setMode('done');
+      else {
+        setError('הקוד לא התקבל. חייבות להיות 4 ספרות, ולא 0000');
+        setMode('first');
+      }
     } else {
       setError('הקודים לא תאמו, נסו שוב');
       setMode('first');

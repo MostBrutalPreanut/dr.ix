@@ -1,87 +1,130 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useCollection } from './db';
-import { seedEmployees } from '../seed/employees';
-import { hashPin } from './pin';
-import type { Employee } from './types';
-
-const SESSION_KEY = 'drix:session';
-
+import { isShared, setSeedAllowed } from './db';
+import { employeeApi as api } from './employeesApi';
+import type { ActionResult, LoginResult } from './employeesApi';
+import { setUnauthorizedHandler } from './session';
+import { seedAll } from '../seed';
+import type { PublicEmployee, Role } from './types';
 
 interface AuthValue {
-  user: Employee | null;
-  employees: Employee[];
+  user: PublicEmployee | null;
+  employees: PublicEmployee[];
   ready: boolean;
   isManager: boolean;
-  login(employeeId: string, pin: string): Promise<boolean>;
+  login(employeeId: string, pin: string): Promise<LoginResult>;
   logout(): void;
-  changePin(pin: string): Promise<void>;
+  /** false = the server refused the PIN (must be 4 digits, not 0000). */
+  changePin(pin: string): Promise<boolean>;
   skipPinChange(): Promise<void>;
-  saveEmployee(e: Employee): Promise<void>;
-  removeEmployee(id: string): Promise<void>;
+  addEmployee(name: string, role: Role): Promise<ActionResult>;
+  setRole(id: string, role: Role): Promise<ActionResult>;
+  resetPin(id: string): Promise<ActionResult>;
+  removeEmployee(id: string): Promise<ActionResult>;
 }
 
 const Ctx = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { items: employees, loading, save, remove } = useCollection<Employee>('employees', seedEmployees);
-  const [sessionId, setSessionId] = useState<string | null>(() => {
+  const [user, setUser] = useState<PublicEmployee | null>(null);
+  const [employees, setEmployees] = useState<PublicEmployee[]>([]);
+  const [ready, setReady] = useState(false);
+
+  const applyUser = useCallback((u: PublicEmployee | null) => {
+    // Only a signed-in manager may write the starting content of the shared server.
+    const mayWrite = !isShared || u?.role === 'manager';
+    setSeedAllowed(mayWrite);
+    if (u && mayWrite) void seedAll().catch(() => undefined);
+    setUser(u);
+  }, []);
+
+  const refresh = useCallback(async () => {
     try {
-      return localStorage.getItem(SESSION_KEY);
+      const list = await api.list();
+      setEmployees(list);
+      setUser((prev) => {
+        if (!prev) return prev;
+        const found = list.find((e) => e.id === prev.id);
+        if (!found) return list.length > 0 ? null : prev; // deleted by a manager
+        // a list fetched before sign-in does not know mustChangePin - never lose it
+        return { ...prev, ...found, mustChangePin: found.mustChangePin ?? prev.mustChangePin };
+      });
     } catch {
-      return null;
+      /* offline: keep what we have */
     }
-  });
+  }, []);
 
   useEffect(() => {
-    try {
-      if (sessionId) localStorage.setItem(SESSION_KEY, sessionId);
-      else localStorage.removeItem(SESSION_KEY);
-    } catch {
-      /* private mode - session just won't persist */
-    }
-  }, [sessionId]);
-
-  const user = useMemo(() => employees.find((e) => e.id === sessionId) ?? null, [employees, sessionId]);
+    setUnauthorizedHandler(() => applyUser(null));
+    let alive = true;
+    void (async () => {
+      const me = await api.restore();
+      if (alive) applyUser(me);
+      await refresh();
+      if (alive) setReady(true);
+    })();
+    const stop = api.subscribe(() => void refresh());
+    return () => {
+      alive = false;
+      stop();
+      setUnauthorizedHandler(null);
+    };
+  }, [applyUser, refresh]);
 
   const login = useCallback(
-    async (employeeId: string, pin: string) => {
-      const emp = employees.find((e) => e.id === employeeId);
-      if (!emp) return false;
-      if ((await hashPin(emp.id, pin)) !== emp.pinHash) return false;
-      setSessionId(emp.id);
-      return true;
+    async (id: string, pin: string) => {
+      const r = await api.login(id, pin);
+      if (r.ok) {
+        applyUser(r.employee);
+        void refresh();
+      }
+      return r;
     },
-    [employees],
+    [applyUser, refresh],
   );
 
   const changePin = useCallback(
     async (pin: string) => {
-      if (!user) return;
-      await save({ ...user, pinHash: await hashPin(user.id, pin), mustChangePin: false });
+      const r = await api.setPin(pin);
+      await refresh();
+      return r.ok;
     },
-    [user, save],
+    [refresh],
   );
 
-  const skipPinChange = useCallback(async () => {
-    if (user) await save({ ...user, mustChangePin: false });
-  }, [user, save]);
-
-  const value: AuthValue = {
-    user,
-    employees,
-    ready: !loading,
-    isManager: user?.role === 'manager',
-    login,
-    logout: () => {
-      setSessionId(null);
-      window.location.hash = '#/'; // the next person starts on the home screen
+  const afterAdmin = useCallback(
+    async (action: Promise<ActionResult>) => {
+      const r = await action;
+      await refresh();
+      return r;
     },
-    changePin,
-    skipPinChange,
-    saveEmployee: save,
-    removeEmployee: remove,
-  };
+    [refresh],
+  );
+
+  const value = useMemo<AuthValue>(
+    () => ({
+      user,
+      employees,
+      ready,
+      isManager: user?.role === 'manager',
+      login,
+      logout: () => {
+        void api.logout();
+        applyUser(null);
+        window.location.hash = '#/'; // the next person starts on the home screen
+      },
+      changePin,
+      skipPinChange: async () => {
+        await api.skipPinChange();
+        await refresh();
+      },
+      addEmployee: (name, role) => afterAdmin(api.add(name, role)),
+      setRole: (id, role) => afterAdmin(api.setRole(id, role)),
+      resetPin: (id) => afterAdmin(api.resetPin(id)),
+      removeEmployee: (id) => afterAdmin(api.remove(id)),
+    }),
+    [user, employees, ready, login, changePin, afterAdmin, applyUser, refresh],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

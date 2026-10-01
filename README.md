@@ -26,14 +26,14 @@ npm run build      # בנייה ל-dist/ (אתר סטטי, אפשר לשים ב�
 ```
 
 ללא הגדרות נוספות האפליקציה עובדת במצב **מקומי**: הנתונים נשמרים בדפדפן של המכשיר.
-כדי שכל העובדים יראו את אותו מידע בזמן אמת, מחברים Supabase:
+כדי שכל העובדים יראו את אותו מידע, מחברים Supabase:
 
 1. יוצרים פרויקט ב-[supabase.com](https://supabase.com) (חינם).
-2. ב-SQL Editor מריצים את [supabase/schema.sql](supabase/schema.sql).
-3. יוצרים קובץ `.env.local`:
+2. ב-**SQL Editor** מדביקים ומריצים את [supabase/gateway.sql](supabase/gateway.sql). הוא יוצר את הטבלאות, נועל אותן, ומגדיר כניסה והרשאות בשרת. אפשר להריץ שוב בכל עת בלי לאבד תוכן.
+3. יוצרים קובץ `.env.local` (לפיתוח) עם:
    ```
    VITE_SUPABASE_URL=https://xxxx.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJ...
+   VITE_SUPABASE_ANON_KEY=sb_publishable_...
    ```
 4. בונים מחדש (`npm run build`) ומעלים את `dist/`.
 
@@ -43,7 +43,7 @@ npm run build      # בנייה ל-dist/ (אתר סטטי, אפשר לשים ב�
 
 ב-[Netlify](https://www.netlify.com): Add new site ← Import an existing project ← GitHub ← בחירת המאגר `dr.ix` והענף. ההגדרות (`netlify.toml`) כבר בפנים. כל push חדש לענף מפרסם גרסה חדשה.
 
-**לפני שמזינים טיפים או נתוני קופה יש להחליף את הגישה הפתוחה לטבלה בשער מאובטח.** ראו [docs/security.md](docs/security.md).
+כל הגישה לנתונים עוברת שער מאובטח עם כניסה והרשאות בשרת. ראו [docs/security.md](docs/security.md).
 
 ## מבנה
 
@@ -52,7 +52,7 @@ src/lib/        לוגיקה (טיפים, משימות חוזרות, המלצו�
 src/seed/       תוכן התחלתי: עובדים, צ'קליסטים, משימות, משחקים
 src/content/handbook/*.md   פרקי הנהלים (נטענים פעם אחת ואז נערכים מתוך האפליקציה)
 src/pages/      מסכים
-supabase/       סכמת מסד הנתונים
+supabase/       gateway.sql: טבלאות, כניסה והרשאות בשרת
 docs/           מדריך Wix, אבטחה, בדיקת תוכן
 ```
 

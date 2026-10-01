@@ -1,13 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Doc } from './types';
+import { isShared, poll, rpc } from './gateway';
+
+export { isShared };
 
 /**
  * Tiny document store. Every collection is a list of `{ id, ...fields }` documents.
  *
  *  - Without configuration the data lives in this browser's localStorage (demo / single device).
- *  - With VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY it is shared between all devices in real time.
- *    See supabase/schema.sql.
+ *  - With VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY it is shared between all devices through the
+ *    secure gateway (supabase/gateway.sql): every call is checked on the server.
  */
 /** Inclusive id range (ids are compared as strings, so date-prefixed ids sort chronologically). */
 export interface IdRange {
@@ -20,7 +22,7 @@ export const idPrefix = (prefix: string): IdRange => ({ from: prefix, to: `${pre
 
 interface Backend {
   list(collection: string, range?: IdRange): Promise<Doc[]>;
-  upsert(collection: string, doc: Doc): Promise<void>;
+  upsert<T extends Doc>(collection: string, doc: T): Promise<void>;
   remove(collection: string, id: string): Promise<void>;
   subscribe(collection: string, onChange: () => void): () => void;
 }
@@ -70,50 +72,26 @@ function localBackend(): Backend {
   };
 }
 
-// ---------- supabase ----------
+// ---------- shared (supabase gateway) ----------
 
-function supabaseBackend(url: string, anonKey: string): Backend {
-  const client = createClient(url, anonKey);
-  const table = 'docs';
+function sharedBackend(): Backend {
   return {
     async list(c, range) {
-      let q = client.from(table).select('id, data').eq('collection', c);
-      if (range) q = q.gte('id', range.from).lte('id', range.to);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []).map((r) => ({ ...(r.data as object), id: r.id as string }));
+      return rpc<Doc[]>('api_list', { p_collection: c, p_from: range?.from ?? null, p_to: range?.to ?? null });
     },
     async upsert(c, doc) {
-      const { error } = await client
-        .from(table)
-        .upsert({ collection: c, id: doc.id, data: doc, updated_at: new Date().toISOString() });
-      if (error) throw error;
+      await rpc<null>('api_upsert', { p_collection: c, p_doc: doc });
     },
     async remove(c, id) {
-      const { error } = await client.from(table).delete().eq('collection', c).eq('id', id);
-      if (error) throw error;
+      await rpc<null>('api_remove', { p_collection: c, p_id: id });
     },
-    subscribe(c, fn) {
-      const channel = client
-        .channel(`docs:${c}:${Math.random().toString(36).slice(2)}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table, filter: `collection=eq.${c}` },
-          fn,
-        )
-        .subscribe();
-      return () => {
-        void client.removeChannel(channel);
-      };
+    subscribe(_c, fn) {
+      return poll(fn);
     },
   };
 }
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
-export const isShared = Boolean(url && anonKey);
-export const backend: Backend = isShared ? supabaseBackend(url!, anonKey!) : localBackend();
+export const backend: Backend = isShared ? sharedBackend() : localBackend();
 
 // ---------- React hook ----------
 
@@ -123,9 +101,40 @@ export function newId(): string {
     : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
-const seedStarted = new Set<string>();
+const seeding = new Map<string, Promise<Doc[]>>();
 
 type Seed<T> = () => T[] | Promise<T[]>;
+
+/** Only managers may write starting content to the shared server (set at sign-in). */
+let seedAllowed = !isShared;
+export function setSeedAllowed(allowed: boolean): void {
+  seedAllowed = allowed;
+}
+
+/**
+ * If a collection has never been used, writes its starting content once (a marker stops it
+ * from coming back after someone deletes everything). Returns the rows to show. Callers that
+ * arrive while the seeding is running wait for it instead of showing an empty list.
+ */
+export async function seedIfEmpty<T extends Doc>(name: string, rows: T[], seed: Seed<T>): Promise<T[]> {
+  if (rows.length > 0 || !seedAllowed) return rows;
+  let job = seeding.get(name);
+  if (!job) {
+    job = (async (): Promise<Doc[]> => {
+      const markerId = `seeded_${name}`;
+      const marker = (await backend.list('meta')).find((d) => d.id === markerId);
+      if (marker) return [];
+      const docs = await seed();
+      await Promise.all(docs.map((d) => backend.upsert(name, d)));
+      await backend.upsert('meta', { id: markerId });
+      return docs;
+    })();
+    seeding.set(name, job);
+    job.catch(() => seeding.delete(name)); // allow a retry after a failure
+  }
+  const docs = (await job) as T[];
+  return docs.length > 0 ? docs : rows;
+}
 
 /**
  * Live list of documents. When the collection has never been used, `seed` provides the
@@ -143,17 +152,7 @@ export function useCollection<T extends Doc>(name: string, seed?: Seed<T>, range
   const load = useCallback(async () => {
     try {
       let rows = (await backend.list(name, from !== undefined && to !== undefined ? { from, to } : undefined)) as T[];
-      if (rows.length === 0 && seedRef.current && !seedStarted.has(name)) {
-        seedStarted.add(name);
-        const markerId = `seeded_${name}`;
-        const marker = (await backend.list('meta')).find((d) => d.id === markerId);
-        if (!marker) {
-          const docs = await seedRef.current();
-          await Promise.all(docs.map((d) => backend.upsert(name, d)));
-          await backend.upsert('meta', { id: markerId });
-          rows = docs;
-        }
-      }
+      if (seedRef.current) rows = await seedIfEmpty(name, rows, seedRef.current);
       setItems(rows);
       setError(null);
     } catch (e) {

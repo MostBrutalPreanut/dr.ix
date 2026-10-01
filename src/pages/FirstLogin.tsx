@@ -17,7 +17,10 @@ export default function FirstLogin() {
       setFirst(pin);
       setError('');
     } else if (first === pin) {
-      await changePin(pin);
+      if (!(await changePin(pin))) {
+        setFirst(null);
+        setError('הקוד לא התקבל, נסו קוד אחר');
+      }
     } else {
       setFirst(null);
       setError('הקודים לא תאמו, נסו שוב מההתחלה');

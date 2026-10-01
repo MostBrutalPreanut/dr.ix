@@ -52,8 +52,13 @@ export default function Login() {
 
   async function submit(pin: string) {
     if (!selected) return;
-    const ok = await login(selected, pin);
-    if (!ok) setError('הקוד שגוי, נסו שוב');
+    const r = await login(selected, pin);
+    if (r.ok) return;
+    if (r.reason === 'locked') {
+      const min = Math.max(1, Math.ceil((r.retryAfterSeconds ?? 300) / 60));
+      setError(`יותר מדי ניסיונות. נסו שוב בעוד ${min} דקות`);
+    } else if (r.reason === 'error') setError('אין חיבור לשרת, נסו שוב');
+    else setError('הקוד שגוי, נסו שוב');
   }
 
   return (

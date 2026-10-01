@@ -1,37 +1,42 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth, } from '../../lib/auth';
-import { newId } from '../../lib/db';
-import { DEFAULT_PIN, hashPin } from '../../lib/pin';
+import { useAuth } from '../../lib/auth';
+import { DEFAULT_PIN } from '../../lib/pin';
+import type { ActionResult } from '../../lib/employeesApi';
 import type { Role } from '../../lib/types';
 
+const REASON: Record<string, string> = {
+  duplicate_name: 'כבר יש עובד בשם הזה',
+  last_manager: 'חייב להישאר לפחות מנהל אחד',
+  self: 'אי אפשר למחוק את עצמך',
+  invalid: 'הפרטים לא תקינים',
+};
+
 export default function AdminEmployees() {
-  const { employees, user, saveEmployee, removeEmployee } = useAuth();
+  const { employees, user, addEmployee, setRole: changeRole, resetPin, removeEmployee } = useAuth();
   const [name, setName] = useState('');
   const [role, setRole] = useState<Role>('staff');
   const [msg, setMsg] = useState('');
 
   const managers = employees.filter((e) => e.role === 'manager');
 
+  /** Runs an admin action and shows the server's answer. */
+  async function run(action: Promise<ActionResult>, success = ''): Promise<boolean> {
+    try {
+      const r = await action;
+      setMsg(r.ok ? success : (REASON[r.reason] ?? 'הפעולה נכשלה'));
+      return r.ok;
+    } catch {
+      setMsg('אין חיבור לשרת או שאין הרשאה');
+      return false;
+    }
+  }
+
   async function add(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    if (employees.some((x) => x.name === trimmed)) {
-      setMsg('כבר יש עובד בשם הזה');
-      return;
-    }
-    const id = newId();
-    await saveEmployee({
-      id,
-      name: trimmed,
-      role,
-      pinHash: await hashPin(id, DEFAULT_PIN),
-      mustChangePin: true,
-      createdAt: new Date().toISOString(),
-    });
-    setName('');
-    setMsg(`${trimmed} נוסף/ה. הקוד ההתחלתי: ${DEFAULT_PIN}`);
+    if (await run(addEmployee(trimmed, role), `${trimmed} נוסף/ה. הקוד ההתחלתי: ${DEFAULT_PIN}`)) setName('');
   }
 
   return (
@@ -56,8 +61,8 @@ export default function AdminEmployees() {
         <button type="submit" className="primary" disabled={!name.trim()}>
           + הוסף עובד
         </button>
-        {msg && <p className="muted small-text">{msg}</p>}
       </form>
+      {msg && <p className="muted" role="status">{msg}</p>}
 
       <div className="card list">
         {[...employees]
@@ -81,16 +86,16 @@ export default function AdminEmployees() {
                     className="small"
                     disabled={lastManager}
                     title={lastManager ? 'חייב להישאר לפחות מנהל אחד' : ''}
-                    onClick={() => void saveEmployee({ ...e, role: e.role === 'manager' ? 'staff' : 'manager' })}
+                    onClick={() => void run(changeRole(e.id, e.role === 'manager' ? 'staff' : 'manager'))}
                   >
                     {e.role === 'manager' ? 'הפוך לעובד' : 'הפוך למנהל'}
                   </button>
                   <button
                     type="button"
                     className="small"
-                    onClick={async () => {
+                    onClick={() => {
                       if (confirm(`לאפס את הקוד של ${e.name} ל-${DEFAULT_PIN}?`))
-                        await saveEmployee({ ...e, pinHash: await hashPin(e.id, DEFAULT_PIN), mustChangePin: true });
+                        void run(resetPin(e.id), `הקוד של ${e.name} אופס ל-${DEFAULT_PIN}`);
                     }}
                   >
                     אפס קוד
@@ -101,7 +106,7 @@ export default function AdminEmployees() {
                     disabled={isMe || lastManager}
                     title={isMe ? 'אי אפשר למחוק את עצמך' : ''}
                     onClick={() => {
-                      if (confirm(`למחוק את ${e.name}? הפעולה לא ניתנת לביטול.`)) void removeEmployee(e.id);
+                      if (confirm(`למחוק את ${e.name}? הפעולה לא ניתנת לביטול.`)) void run(removeEmployee(e.id));
                     }}
                   >
                     מחק

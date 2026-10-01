@@ -12,6 +12,16 @@ export interface Employee extends Doc {
   createdAt: string;
 }
 
+/** What the app knows about a colleague - never includes the PIN or its hash. */
+export interface PublicEmployee {
+  id: string;
+  name: string;
+  role: Role;
+  /** Only known after sign-in. */
+  mustChangePin?: boolean;
+  createdAt?: string;
+}
+
 export type Area = 'all' | 'front' | 'kitchen' | 'bar';
 
 export const AREA_LABEL: Record<Area, string> = {
