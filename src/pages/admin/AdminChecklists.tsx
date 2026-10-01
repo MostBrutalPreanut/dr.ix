@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { newId, useCollection } from '../../lib/db';
 import type { Checklist, ChecklistGroup } from '../../lib/types';
 import { seedChecklists } from '../../seed/checklists';
-import { t } from '../../lib/i18n';
+import { pruneEn, suggestEn, t, tl } from '../../lib/i18n';
 
 function move<T>(arr: T[], i: number, dir: -1 | 1): T[] {
   const j = i + dir;
@@ -19,6 +19,7 @@ export default function AdminChecklists() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Checklist | null>(null);
   const [saved, setSaved] = useState(false);
+  const [showEn, setShowEn] = useState(false);
 
   const selected = sorted.find((c) => c.id === (selectedId ?? sorted[0]?.id));
 
@@ -43,7 +44,7 @@ export default function AdminChecklists() {
       <div className="chips">
         {sorted.map((c) => (
           <button key={c.id} type="button" className={`chip pick${c.id === selected?.id ? ' on' : ''}`} onClick={() => setSelectedId(c.id)}>
-            {c.icon} {t(c.title)}
+            {c.icon} {tl(c.title, c.titleEn)}
           </button>
         ))}
         <button
@@ -59,6 +60,11 @@ export default function AdminChecklists() {
         </button>
       </div>
 
+      <label className="inline check">
+        <input type="checkbox" checked={showEn} onChange={(e) => setShowEn(e.target.checked)} />
+        {t('הצג שדות לגרסה באנגלית')}
+      </label>
+
       <div className="card form">
         <div className="row">
           <label className="inline" style={{ flex: '0 0 5rem' }}>
@@ -68,6 +74,7 @@ export default function AdminChecklists() {
           <label style={{ flex: 1 }}>
             {t('שם הרשימה')}
             <input value={draft.title} onChange={(e) => { setSaved(false); setDraft({ ...draft, title: e.target.value }); }} />
+            {showEn && <input dir="ltr" aria-label={t('שם הרשימה באנגלית')} placeholder={suggestEn(draft.title) || t('גרסה באנגלית (לא חובה)')} value={draft.titleEn ?? ''} onChange={(e) => { setSaved(false); setDraft({ ...draft, titleEn: e.target.value }); }} />}
           </label>
         </div>
       </div>
@@ -81,6 +88,7 @@ export default function AdminChecklists() {
               value={g.title}
               onChange={(e) => patchGroup(gi, (x) => ({ ...x, title: e.target.value }))}
             />
+            {showEn && <input dir="ltr" style={{ flex: 1 }} aria-label={t('שם הקבוצה באנגלית')} placeholder={suggestEn(g.title) || t('גרסה באנגלית (לא חובה)')} value={g.titleEn ?? ''} onChange={(e) => patchGroup(gi, (x) => ({ ...x, titleEn: e.target.value }))} />}
             <button type="button" className="small" aria-label={t('הזז קבוצה למעלה')} onClick={() => { setSaved(false); setDraft({ ...draft, groups: move(draft.groups, gi, -1) }); }}>▲</button>
             <button type="button" className="small" aria-label={t('הזז קבוצה למטה')} onClick={() => { setSaved(false); setDraft({ ...draft, groups: move(draft.groups, gi, 1) }); }}>▼</button>
             <button
@@ -117,6 +125,12 @@ export default function AdminChecklists() {
                 value={it.detail ?? ''}
                 onChange={(e) => patchGroup(gi, (x) => ({ ...x, items: x.items.map((y, k) => (k === ii ? { ...y, detail: e.target.value || undefined } : y)) }))}
               />
+              {showEn && (
+                <>
+                  <textarea dir="ltr" rows={2} aria-label={t('טקסט הסעיף באנגלית')} placeholder={suggestEn(it.text) || t('גרסה באנגלית (לא חובה)')} value={it.textEn ?? ''} onChange={(e) => patchGroup(gi, (x) => ({ ...x, items: x.items.map((y, k) => (k === ii ? { ...y, textEn: e.target.value } : y)) }))} />
+                  {it.detail && <input dir="ltr" aria-label={t('הערה באנגלית')} placeholder={suggestEn(it.detail) || t('גרסה באנגלית (לא חובה)')} value={it.detailEn ?? ''} onChange={(e) => patchGroup(gi, (x) => ({ ...x, items: x.items.map((y, k) => (k === ii ? { ...y, detailEn: e.target.value } : y)) }))} />}
+                </>
+              )}
             </div>
           ))}
           <button
@@ -141,10 +155,16 @@ export default function AdminChecklists() {
           type="button"
           className="primary wide"
           onClick={async () => {
-            const clean: Checklist = {
-              ...draft,
-              groups: draft.groups.map((g) => ({ ...g, items: g.items.filter((i) => i.text.trim()) })),
-            };
+            const clean: Checklist = pruneEn(
+              {
+                ...draft,
+                groups: draft.groups.map((g) => ({
+                  ...pruneEn(g, ['titleEn']),
+                  items: g.items.filter((i) => i.text.trim()).map((i) => pruneEn(i, ['textEn', 'detailEn'])),
+                })),
+              },
+              ['titleEn'],
+            );
             await save(clean);
             setDraft(clean);
             setSaved(true);

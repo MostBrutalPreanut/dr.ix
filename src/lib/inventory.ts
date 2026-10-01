@@ -1,6 +1,6 @@
 import type { InventoryItem, InventoryReport, StockLevel } from './types';
 import { LEVEL_LABEL } from './types';
-import { t } from './i18n';
+import { getLang, t, tl } from './i18n';
 import { daysBetween } from './dates';
 
 /** Is the item asked about on this weekday? (no days = every day) */
@@ -64,13 +64,19 @@ export function formatRestockList(lines: RestockLine[], dateLabel: string): stri
   for (const l of lines) byCategory.set(l.item.category, [...(byCategory.get(l.item.category) ?? []), l]);
   const out = [t('🛒 רשימת קניות - {date}', { date: dateLabel })];
   for (const [cat, list] of byCategory) {
-    out.push('', `${t(cat)}:`);
+    out.push('', `${catLabel(lines.map((x) => x.item), cat)}:`);
     for (const l of list) {
-      const extra = l.item.mode === 'count' && l.report.count !== undefined ? `${l.report.count}${l.item.unit ? ` ${t(l.item.unit)}` : ''}` : t(LEVEL_LABEL[l.level]);
-      out.push(`• ${t(l.item.name)} (${extra})`);
+      const extra = l.item.mode === 'count' && l.report.count !== undefined ? `${l.report.count}${l.item.unit ? ` ${tl(l.item.unit, l.item.unitEn)}` : ''}` : t(LEVEL_LABEL[l.level]);
+      out.push(`• ${tl(l.item.name, l.item.nameEn)} (${extra})`);
     }
   }
   return out.join('\n');
+}
+
+/** The name of a category in the current language (a manager's English name, else the built-in one). */
+export function catLabel(items: InventoryItem[], category: string): string {
+  const en = getLang() === 'en' ? items.find((i) => i.category === category && i.categoryEn?.trim())?.categoryEn : undefined;
+  return tl(category, en);
 }
 
 /** Categories in the order of their first item. */

@@ -10,6 +10,7 @@ export function NoteComposer({ date, onDone }: { date: string; onDone?: () => vo
   const { user } = useAuth();
   const { save } = useCollection<Note>('notes', undefined, { from: date, to: `${date}~` });
   const [text, setText] = useState('');
+  const [textEn, setTextEn] = useState('');
   const [area, setArea] = useState<Area>('all');
   const [urgent, setUrgent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -23,12 +24,14 @@ export function NoteComposer({ date, onDone }: { date: string; onDone?: () => vo
         id: `${date}|${newId()}`,
         date,
         text: text.trim(),
+        ...(textEn.trim() ? { textEn: textEn.trim() } : {}),
         area,
         urgent,
         createdBy: user.id,
         createdAt: new Date().toISOString(),
       });
       setText('');
+      setTextEn('');
       setUrgent(false);
       onDone?.();
     } finally {
@@ -45,6 +48,14 @@ export function NoteComposer({ date, onDone }: { date: string; onDone?: () => vo
           onChange={(e) => setText(e.target.value)}
           rows={3}
           placeholder={t('למשל: לחבר שולחנות 4 ו-5 לשעה 19:00, לסדר את החדר הפרטי, להכין תוספות פיצה אקסטרה…')}
+        />
+        <textarea
+          dir="ltr"
+          value={textEn}
+          onChange={(e) => setTextEn(e.target.value)}
+          rows={2}
+          aria-label={t('ההערה באנגלית')}
+          placeholder={t('גרסה באנגלית (לא חובה) - מי שמשתמש באפליקציה באנגלית יראה אותה')}
         />
       </label>
       <div className="field-row">

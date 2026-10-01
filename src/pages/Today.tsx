@@ -6,12 +6,13 @@ import { useBusinessDate } from '../lib/useBusinessDate';
 import { CARRY_OVER_DAYS, completionId, dueTasks } from '../lib/schedule';
 import { WEEKDAY_NAMES, addDays, formatLongDate, formatTime, weekdayOf } from '../lib/dates';
 import { AREA_LABEL } from '../lib/types';
-import type { Checklist, ChecklistCheck, ChecklistClosure, Note, NoteAck, Settings, Task, TaskCompletion } from '../lib/types';
+import type { Checklist, ChecklistCheck, ChecklistClosure, InventoryItem, InventoryReport, Note, NoteAck, Settings, Task, TaskCompletion } from '../lib/types';
+import { isDueOn } from '../lib/inventory';
 import { seedChecklists } from '../seed/checklists';
 import { seedSettings, seedTasks } from '../seed/tasks';
 import { NoteComposer } from '../components/NoteComposer';
 import { ReservationsSummary } from '../components/Reservations';
-import { t } from '../lib/i18n';
+import { t, tl } from '../lib/i18n';
 
 export default function Today() {
   const { user, isManager, employees } = useAuth();
@@ -25,6 +26,8 @@ export default function Today() {
   const closures = useCollection<ChecklistClosure>('closures', undefined, idPrefix(today));
   const tasks = useCollection<Task>('tasks', seedTasks);
   const settings = useCollection<Settings>('settings', seedSettings);
+  const stockItems = useCollection<InventoryItem>('inventoryItems');
+  const stockReports = useCollection<InventoryReport>('inventoryReports', undefined, idPrefix(today));
   const completions = useCollection<TaskCompletion>('taskCompletions', undefined, {
     from: addDays(today, -CARRY_OVER_DAYS),
     to: `${today}~`,
@@ -85,7 +88,13 @@ export default function Today() {
     else await completions.save({ id, taskId, dueDate, by: user!.id, at: new Date().toISOString() });
   }
 
-  const doneCount = due.filter((d) => d.done).length;
+  // the stock table is part of the day's tasks on the days when it has something to check
+  const stockDue = stockItems.items.filter((i) => isDueOn(i, weekdayOf(today)));
+  const stockDone = stockDue.filter((i) => stockReports.items.some((r) => r.itemId === i.id)).length;
+  const stockTask = stockDue.length > 0;
+  const stockComplete = stockTask && stockDone === stockDue.length;
+  const doneCount = due.filter((d) => d.done).length + (stockComplete ? 1 : 0);
+  const taskTotal = due.length + (stockTask ? 1 : 0);
 
   return (
     <>
@@ -123,7 +132,7 @@ export default function Today() {
                   {nameOf(n.createdBy)} · {formatTime(n.createdAt)}
                 </span>
               </div>
-              <p className="note-text">{n.text}</p>
+              <p className="note-text">{tl(n.text, n.textEn)}</p>
               <div className="note-foot">
                 {iSaw ? (
                   <>
@@ -169,7 +178,7 @@ export default function Today() {
               return (
                 <Link key={c.id} to={`/checklist/${c.id}`} className={`card tile${closed ? ' closed' : ''}`}>
                   <div className="tile-title">
-                    <span className="big-ico">{c.icon}</span> {t(c.title)}
+                    <span className="big-ico">{c.icon}</span> {tl(c.title, c.titleEn)}
                   </div>
                   <div className="bar">
                     <div style={{ width: `${pct}%` }} />
@@ -187,10 +196,24 @@ export default function Today() {
         <div className="section-head">
           <h2>{t('🧹 משימות יום {day}', { day: t(WEEKDAY_NAMES[weekdayOf(today)]) })}</h2>
           <span className="muted small-text">
-            {doneCount}/{due.length}
+            {doneCount}/{taskTotal}
           </span>
         </div>
-        {due.length === 0 && <p className="muted empty">{t('אין משימות מיוחדות להיום 🎉')}</p>}
+        {taskTotal === 0 && <p className="muted empty">{t('אין משימות מיוחדות להיום 🎉')}</p>}
+        {stockTask && (
+          <Link to="/inventory" className={`card task stock-task${stockComplete ? ' done' : ''}`}>
+            <div className="task-row">
+              <span className={`check${stockComplete ? ' on' : ''}`} aria-hidden>
+                {stockComplete ? '✓' : ''}
+              </span>
+              <span className="task-title">
+                <span>{t('📦 למלא את טבלת המלאי')}</span>
+                <span className="chip">{stockDone}/{stockDue.length}</span>
+              </span>
+              <span className="chev" aria-hidden>{t('←')}</span>
+            </div>
+          </Link>
+        )}
         {due.map(({ task, dueDate, done, late }) => {
           const comp = completions.items.find((c) => c.id === completionId(task.id, dueDate));
           const key = `${dueDate}|${task.id}`;
@@ -208,7 +231,7 @@ export default function Today() {
                   {done ? '✓' : ''}
                 </button>
                 <button type="button" className="task-title" onClick={() => setOpenTask(open ? null : key)}>
-                  <span>{t(task.title)}</span>
+                  <span>{tl(task.title, task.titleEn)}</span>
                   {late && <span className="chip red">{t('מיום {day}', { day: t(WEEKDAY_NAMES[weekdayOf(dueDate)]) })}</span>}
                   {task.everyNWeeks === 2 && <span className="chip">{t('אחת לשבועיים')}</span>}
                   {comp && (
@@ -222,7 +245,7 @@ export default function Today() {
               {open && (
                 <div className="task-detail">
                   {task.description ? (
-                    <p>{t(task.description)}</p>
+                    <p>{tl(task.description, task.descriptionEn)}</p>
                   ) : (
                     <p className="muted">{t('עדיין אין הסבר למשימה הזו.')}{isManager && t(' אפשר להוסיף אחד בניהול ← משימות ניקיון.')}</p>
                   )}

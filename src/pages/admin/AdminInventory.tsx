@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { newId, useCollection } from '../../lib/db';
 import { WEEKDAY_NAMES } from '../../lib/dates';
-import { categoriesOf, itemsOfCategory, moveItem, parseBulk } from '../../lib/inventory';
+import { catLabel, categoriesOf, itemsOfCategory, moveItem, parseBulk } from '../../lib/inventory';
 import type { InventoryItem, InventoryMode } from '../../lib/types';
 import { seedInventory } from '../../seed/inventory';
-import { t, tn } from '../../lib/i18n';
+import { pruneEn, suggestEn, t, tl, tn } from '../../lib/i18n';
 
 const MODE_LABEL: Record<InventoryMode, string> = {
   status: tn('מספיק / מעט / נגמר'),
@@ -42,9 +42,12 @@ export default function AdminInventory() {
 
   async function renameCategory(cat: string) {
     const name = prompt(t('שם חדש לקטגוריה:'), cat)?.trim();
-    if (!name || name === cat) return;
+    if (!name) return;
+    const current = inv.items.find((x) => x.category === cat && x.categoryEn)?.categoryEn ?? '';
+    const en = prompt(t('שם הקטגוריה באנגלית (אפשר להשאיר ריק):'), current)?.trim() ?? current;
+    if (name === cat && en === current) return;
     await guard(async () => {
-      for (const i of inv.items.filter((x) => x.category === cat)) await inv.save({ ...i, category: name });
+      for (const i of inv.items.filter((x) => x.category === cat)) await inv.save(pruneEn({ ...i, category: name, categoryEn: en }, ['categoryEn']));
     });
   }
 
@@ -58,6 +61,10 @@ export default function AdminInventory() {
         onSave={async (i) => {
           await guard(async () => {
             await inv.save(i);
+            // the English name of a category belongs to the whole category
+            if (i.categoryEn) {
+              for (const o of inv.items.filter((x) => x.category === i.category && x.id !== i.id && x.categoryEn !== i.categoryEn)) await inv.save({ ...o, categoryEn: i.categoryEn });
+            }
             setEditing(null);
           });
         }}
@@ -124,7 +131,7 @@ export default function AdminInventory() {
         return (
           <section key={cat}>
             <div className="section-head">
-              <h2>{t(cat)}</h2>
+              <h2>{catLabel(inv.items, cat)}</h2>
               <button type="button" className="small" onClick={() => void renameCategory(cat)}>
                 {t('שנה שם קטגוריה')}
               </button>
@@ -133,7 +140,7 @@ export default function AdminInventory() {
               {list.map((i) => (
                 <div key={i.id} className={`li inv-admin-row${i.active ? '' : ' off'}`}>
                   <button type="button" className="li-body linklike" onClick={() => setEditing(i)}>
-                    <strong>{t(i.name)}</strong>
+                    <strong>{tl(i.name, i.nameEn)}</strong>
                     <span className="chips">
                       <span className="chip">{i.mode === 'status' ? t('סטטוס') : i.mode === 'count' ? t('ספירה{p1}', { p1: i.unit ? ` · ${i.unit}` : '' }) : t('צילום')}</span>
                       <span className="chip soft">{i.days.length === 0 ? t('כל יום') : i.days.map((d) => t(WEEKDAY_NAMES[d])).join(', ')}</span>
@@ -214,9 +221,10 @@ function ItemEditor({
       onSubmit={(e) => {
         e.preventDefault();
         if (!valid) return;
-        const clean: InventoryItem = { ...f, name: f.name.trim(), category: f.category.trim(), hint: f.hint?.trim() || undefined, unit: f.unit?.trim() || undefined };
+        const clean: InventoryItem = pruneEn({ ...f, name: f.name.trim(), category: f.category.trim(), hint: f.hint?.trim() || undefined, unit: f.unit?.trim() || undefined }, ['nameEn', 'categoryEn', 'hintEn', 'unitEn']);
         if (clean.mode !== 'count') {
           delete clean.unit;
+          delete clean.unitEn;
           delete clean.min;
         }
         void onSave(clean);
@@ -226,8 +234,10 @@ function ItemEditor({
       <label>
         {t('שם הפריט')}
         <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
+        <input dir="ltr" value={f.nameEn ?? ''} onChange={(e) => setF({ ...f, nameEn: e.target.value })} aria-label={t('שם הפריט באנגלית')} placeholder={suggestEn(f.name) || t('גרסה באנגלית (לא חובה)')} />
       </label>
       <CategoryField value={f.category} categories={categories} onChange={(category) => setF({ ...f, category })} />
+      <input dir="ltr" value={f.categoryEn ?? ''} onChange={(e) => setF({ ...f, categoryEn: e.target.value })} aria-label={t('שם הקטגוריה באנגלית')} placeholder={t('קטגוריה באנגלית (לא חובה, תחול על כל הקטגוריה)')} />
       <label>
         {t('איך מדווחים')}
         <select value={f.mode} onChange={(e) => setF({ ...f, mode: e.target.value as InventoryMode })}>
@@ -243,6 +253,7 @@ function ItemEditor({
           <label style={{ flex: 1 }}>
             {t('יחידה (ארגזים, שקיות…)')}
             <input value={f.unit ?? ''} onChange={(e) => setF({ ...f, unit: e.target.value })} />
+            <input dir="ltr" value={f.unitEn ?? ''} onChange={(e) => setF({ ...f, unitEn: e.target.value })} aria-label={t('יחידה באנגלית')} placeholder={t('גרסה באנגלית (לא חובה)')} />
           </label>
           <label style={{ flex: 1 }}>
             {t('"מעט" עד כמות')}
@@ -259,6 +270,7 @@ function ItemEditor({
       <label>
         {t('הסבר קצר מתחת לשם (לא חובה)')}
         <input value={f.hint ?? ''} onChange={(e) => setF({ ...f, hint: e.target.value })} placeholder={t('למשל: יש יותר מ-5 שרוולים')} />
+        <input dir="ltr" value={f.hintEn ?? ''} onChange={(e) => setF({ ...f, hintEn: e.target.value })} aria-label={t('הסבר באנגלית')} placeholder={t('גרסה באנגלית (לא חובה)')} />
       </label>
       <DaysField days={f.days} onChange={(days) => setF({ ...f, days })} />
       {f.mode !== 'photo' && (

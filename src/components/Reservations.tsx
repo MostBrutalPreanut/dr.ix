@@ -22,11 +22,11 @@ export function guestTotals(list: Reservation[]) {
 /** Table numbers of a reservation; ids nobody named yet show "?" to managers only. */
 function tableLabels(r: Reservation, names: Map<string, string>, isManager: boolean): string[] {
   const out: string[] = [];
-  for (const id of r.tableIds ?? []) {
-    const label = names.get(id);
+  (r.tableIds ?? []).forEach((id, i) => {
+    const label = r.tableNames?.[i] || names.get(id); // the name from Wix, else the one a manager typed
     if (label) out.push(label);
     else if (isManager) out.push('?');
-  }
+  });
   return out;
 }
 

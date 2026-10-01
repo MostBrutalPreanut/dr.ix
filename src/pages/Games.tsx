@@ -5,7 +5,7 @@ import { recommend } from '../lib/games';
 import { DIFFICULTY_LABEL, STYLE_LABEL } from '../lib/types';
 import type { Difficulty, Game, GameStyle } from '../lib/types';
 import { seedGames } from '../seed/games';
-import { t } from '../lib/i18n';
+import { getLang, pruneEn, t, tl } from '../lib/i18n';
 
 const STYLES = Object.keys(STYLE_LABEL) as GameStyle[];
 const DIFFICULTIES = Object.keys(DIFFICULTY_LABEL) as Difficulty[];
@@ -22,7 +22,7 @@ function GameCard({ game, onEdit }: { game: Game; onEdit?: () => void }) {
       <div className="game-head">
         <h3>
           {game.featured && <span title={t('חובה להכיר')}>⭐ </span>}
-          {game.name}
+          {game.nameEn && getLang() === 'en' ? game.nameEn : game.name}
         </h3>
         {onEdit && (
           <button type="button" className="small" onClick={onEdit} aria-label={t('עריכת {name}', { name: game.name })}>
@@ -46,7 +46,7 @@ function GameCard({ game, onEdit }: { game: Game; onEdit?: () => void }) {
         {game.durationMin !== undefined && <span className="chip">⏱ {game.durationMin}{' '}{t("דק'")}</span>}
         {game.shelf && <span className="chip red">{t('📍 מדף')}{' '}{game.shelf}</span>}
       </div>
-      {game.notes && <p className="muted small-text">{t(game.notes)}</p>}
+      {game.notes && <p className="muted small-text">{tl(game.notes, game.notesEn)}</p>}
     </article>
   );
 }
@@ -126,27 +126,29 @@ export default function Games() {
       {tab === 'recommend' ? (
         <>
           <div className="card form">
-            <div className="row between">
-              <span>{t('כמה אורחים?')}</span>
-              <div className="stepper">
-                <button type="button" aria-label={t('פחות')} onClick={() => { setPlayers((p) => Math.max(1, p - 1)); setShown(PAGE); }}>−</button>
-                <output aria-live="polite">{players}</output>
-                <button type="button" aria-label={t('יותר')} onClick={() => { setPlayers((p) => Math.min(30, p + 1)); setShown(PAGE); }}>+</button>
+            <div className="guests-age">
+              <div>
+                <span className="label">{t('כמה אורחים?')}</span>
+                <div className="stepper">
+                  <button type="button" aria-label={t('פחות')} onClick={() => { setPlayers((p) => Math.max(1, p - 1)); setShown(PAGE); }}>−</button>
+                  <output aria-live="polite">{players}</output>
+                  <button type="button" aria-label={t('יותר')} onClick={() => { setPlayers((p) => Math.min(30, p + 1)); setShown(PAGE); }}>+</button>
+                </div>
               </div>
+              <label>
+                <span className="label">{t('הגיל של הצעיר ביותר')}</span>
+                <input
+                  className="age"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={99}
+                  value={age}
+                  placeholder={t('לא משנה')}
+                  onChange={(e) => { setAge(e.target.value); setShown(PAGE); }}
+                />
+              </label>
             </div>
-            <label className="row between">
-              <span>{t('הגיל של הצעיר ביותר')}</span>
-              <input
-                className="age"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={99}
-                value={age}
-                placeholder={t('לא משנה')}
-                onChange={(e) => { setAge(e.target.value); setShown(PAGE); }}
-              />
-            </label>
             <div>
               <span className="label">{t('סגנון')}</span>
               <div className="chips">
@@ -216,7 +218,7 @@ function GameEditor({
       onSubmit={(e) => {
         e.preventDefault();
         if (!valid) return;
-        const clean: Game = { ...g, name: g.name.trim() };
+        const clean: Game = pruneEn({ ...g, name: g.name.trim() }, ['nameEn', 'notesEn']);
         if (clean.minAge === undefined) delete clean.minAge;
         if (clean.durationMin === undefined) delete clean.durationMin;
         if (!clean.notes?.trim()) delete clean.notes;
@@ -230,6 +232,7 @@ function GameEditor({
       <label>
         {t('שם המשחק')}
         <input value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} required />
+        <input dir="ltr" value={g.nameEn ?? ''} onChange={(e) => setG({ ...g, nameEn: e.target.value })} aria-label={t('שם המשחק באנגלית')} placeholder={t('גרסה באנגלית (לא חובה)')} />
       </label>
       <div className="row">
         <label style={{ flex: 1 }}>
@@ -278,6 +281,7 @@ function GameEditor({
       <label>
         {t('הערות')}
         <textarea rows={2} value={g.notes ?? ''} onChange={(e) => setG({ ...g, notes: e.target.value })} placeholder={t('למשל: איך מלמדים, טיפים, חלקים חסרים')} />
+        <textarea dir="ltr" rows={2} value={g.notesEn ?? ''} onChange={(e) => setG({ ...g, notesEn: e.target.value })} aria-label={t('הערות באנגלית')} placeholder={t('גרסה באנגלית (לא חובה)')} />
       </label>
       <label className="inline check">
         <input type="checkbox" checked={Boolean(g.featured)} onChange={(e) => setG({ ...g, featured: e.target.checked })} />

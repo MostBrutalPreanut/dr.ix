@@ -7,7 +7,7 @@ import { useBusinessDate } from '../../lib/useBusinessDate';
 import { AREA_LABEL } from '../../lib/types';
 import type { Note, NoteAck } from '../../lib/types';
 import { NoteComposer } from '../../components/NoteComposer';
-import { t } from '../../lib/i18n';
+import { t, tl } from '../../lib/i18n';
 
 export default function AdminNotes() {
   const today = useBusinessDate();
@@ -51,7 +51,7 @@ export default function AdminNotes() {
                   {nameOf(n.createdBy)} · {formatTime(n.createdAt)}
                 </span>
               </div>
-              <p className="note-text">{n.text}</p>
+              <p className="note-text">{tl(n.text, n.textEn)}</p>
               <div className="note-foot">
                 <span className="muted small-text">
                   {t('ראו (')}{seen.length}): {seen.map((a) => nameOf(a.employeeId)).join(', ') || t('אף אחד עדיין')}

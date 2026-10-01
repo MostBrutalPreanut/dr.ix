@@ -22,6 +22,33 @@ export function t(text: string, params?: Record<string, string | number>): strin
   return out;
 }
 
+/**
+ * A text that a manager typed (in Hebrew) with an optional English version typed next to it.
+ * English mode: the typed English version, else the built-in translation, else the Hebrew.
+ */
+export function tl(he: string | undefined, en?: string): string {
+  if (!he) return '';
+  return current === 'en' ? en?.trim() || t(he) : he;
+}
+
+/** The built-in English text of a Hebrew text ('' when there is none) - shown as a hint in the editors. */
+export function suggestEn(he: string): string {
+  return EN[he] ?? '';
+}
+
+/** Drops the optional English fields that were left empty (and trims the others). */
+export function pruneEn<T extends object>(doc: T, keys: (keyof T)[]): T {
+  const out = { ...doc };
+  for (const k of keys) {
+    const v = out[k];
+    if (typeof v === 'string') {
+      if (v.trim()) out[k] = v.trim() as T[keyof T];
+      else delete out[k];
+    }
+  }
+  return out;
+}
+
 /** Marks a text that must be translated later (module-level constants): returns it unchanged. */
 export const tn = (text: string): string => text;
 

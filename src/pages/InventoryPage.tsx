@@ -4,12 +4,12 @@ import { useAuth } from '../lib/auth';
 import { backend, useCollection } from '../lib/db';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { WEEKDAY_NAMES, addDays, formatLongDate, weekdayOf } from '../lib/dates';
-import { categoriesOf, formatRestockList, isDueOn, itemsOfCategory, latestReports, levelOf, restockList } from '../lib/inventory';
+import { catLabel, categoriesOf, formatRestockList, isDueOn, itemsOfCategory, latestReports, levelOf, restockList } from '../lib/inventory';
 import { shrinkImage } from '../lib/image';
 import { LEVEL_LABEL } from '../lib/types';
 import type { InventoryItem, InventoryPhoto, InventoryReport, StockLevel } from '../lib/types';
 import { seedInventory } from '../seed/inventory';
-import { t } from '../lib/i18n';
+import { t, tl } from '../lib/i18n';
 
 const LEVELS: StockLevel[] = ['ok', 'low', 'out'];
 
@@ -90,9 +90,9 @@ export default function InventoryPage() {
             {lines.map((l) => (
               <div key={l.item.id} className="li emp">
                 <span className="li-body">
-                  <strong>{t(l.item.name)}</strong>
+                  <strong>{tl(l.item.name, l.item.nameEn)}</strong>
                   <span className="muted small-text block">
-                    {t(l.item.category)} · {l.item.mode === 'count' && l.report.count !== undefined ? `${l.report.count}${l.item.unit ? ` ${t(l.item.unit)}` : ''}` : t(LEVEL_LABEL[l.level])}
+                    {catLabel(items.items, l.item.category)} · {l.item.mode === 'count' && l.report.count !== undefined ? `${l.report.count}${l.item.unit ? ` ${tl(l.item.unit, l.item.unitEn)}` : ''}` : t(LEVEL_LABEL[l.level])}
                     {l.ageDays > 0 ? t(' · לפני {ageDays} ימים', { ageDays: l.ageDays }) : t(' · היום')}
                   </span>
                 </span>
@@ -118,7 +118,7 @@ export default function InventoryPage() {
           {shown.length === 0 && <p className="muted">{t('אין פריטים לבדיקה היום.')}</p>}
           {categories.map((cat) => (
             <section key={cat}>
-              <h3 className="cat">{t(cat)}</h3>
+              <h3 className="cat">{catLabel(items.items, cat)}</h3>
               <div className="card list">
                 {itemsOfCategory(shown, cat).map((item) => (
                   <ItemRow key={item.id} item={item} report={todays.get(item.id)} today={today} write={write} />
@@ -200,13 +200,13 @@ function ItemRow({
     <div className="li inv">
       <span className="li-body">
         <span className="inv-name">
-          <strong>{t(item.name)}</strong>
+          <strong>{tl(item.name, item.nameEn)}</strong>
           {level && level !== 'ok' && <span className={`chip ${level === 'out' ? 'red' : ''}`}>{t(LEVEL_LABEL[level])}</span>}
         </span>
-        {item.hint && <span className="muted small-text">{t(item.hint)}</span>}
+        {item.hint && <span className="muted small-text">{tl(item.hint, item.hintEn)}</span>}
 
         {item.mode === 'status' && (
-          <span className="seg inv-seg" role="group" aria-label={t('מצב {name}', { name: t(item.name) })}>
+          <span className="seg inv-seg" role="group" aria-label={t('מצב {name}', { name: tl(item.name, item.nameEn) })}>
             {LEVELS.map((lv) => (
               <button
                 key={lv}
@@ -225,7 +225,7 @@ function ItemRow({
             <button type="button" aria-label={t('פחות')} onClick={() => setCountSoon((count ?? 0) - 1)}>−</button>
             <output>{count ?? '–'}</output>
             <button type="button" aria-label={t('יותר')} onClick={() => setCountSoon((count ?? 0) + 1)}>+</button>
-            {item.unit && <span className="muted">{t(item.unit)}</span>}
+            {item.unit && <span className="muted">{tl(item.unit, item.unitEn)}</span>}
             {item.min !== undefined && item.min > 0 && <span className="muted small-text">{t('(מעט: עד')}{' '}{item.min})</span>}
           </span>
         )}

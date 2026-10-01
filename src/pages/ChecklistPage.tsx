@@ -5,7 +5,7 @@ import { useBusinessDate } from '../lib/useBusinessDate';
 import { formatLongDate, formatTime } from '../lib/dates';
 import type { Checklist, ChecklistCheck, ChecklistClosure } from '../lib/types';
 import { seedChecklists } from '../seed/checklists';
-import { t } from '../lib/i18n';
+import { t, tl } from '../lib/i18n';
 
 export default function ChecklistPage() {
   const { id = '' } = useParams();
@@ -69,7 +69,7 @@ export default function ChecklistPage() {
     <>
       <Link to="/" className="back">{t('← חזרה להיום')}</Link>
       <h1>
-        {list.icon} {t(list.title)}
+        {list.icon} {tl(list.title, list.titleEn)}
       </h1>
       <p className="muted">{formatLongDate(today)}</p>
       <div className="bar big">
@@ -101,7 +101,7 @@ export default function ChecklistPage() {
         return (
           <section key={g.id}>
             <div className="section-head">
-              <h2>{t(g.title)}</h2>
+              <h2>{tl(g.title, g.titleEn)}</h2>
               <span className="muted small-text">
                 {gDone}/{g.items.length}
               </span>
@@ -120,8 +120,8 @@ export default function ChecklistPage() {
                   >
                     <span className={`check${c ? ' on' : ''}`}>{c ? '✓' : ''}</span>
                     <span className="li-body">
-                      <span className="li-text">{t(item.text)}</span>
-                      {item.detail && <span className="li-detail">{t(item.detail)}</span>}
+                      <span className="li-text">{tl(item.text, item.textEn)}</span>
+                      {item.detail && <span className="li-detail">{tl(item.detail, item.detailEn)}</span>}
                       {c && (
                         <span className="muted small-text">
                           {nameOf(c.by)} · {formatTime(c.at)}

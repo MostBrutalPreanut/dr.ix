@@ -2,7 +2,8 @@
 //
 // Supabase Edge Function "wix". Deploy with "Verify JWT" switched OFF (our sign-in is the
 // gateway token, checked below). Secrets (Edge Functions -> Secrets):
-//   WIX_API_KEY   the Wix API key (Manage Reservations permission). Never leaves the server.
+//   WIX_API_KEY   the Wix API key (Manage Reservations permission, plus Read Reservation Locations
+//                 so that table names can be shown). Never leaves the server.
 //   WIX_SITE_ID   optional, defaults to the Drix site.
 //
 // Privacy: the response never contains phone, e-mail or last name - first name, time,
@@ -122,6 +123,47 @@ async function queryWix(apiKey: string, date: string): Promise<WixReservation[]>
   return all;
 }
 
+/** Table id -> the name set in the Wix dashboard ("7", "Window", ...). Wix keeps them on the reservation location. */
+type TableNames = { names: Map<string, string>; status: 'ok' | 'permission' | 'error' };
+let tableCache: { at: number; value: TableNames } | null = null;
+const TABLE_CACHE_MS = 10 * 60_000;
+
+async function fetchTableNames(apiKey: string): Promise<TableNames> {
+  if (tableCache && Date.now() - tableCache.at < TABLE_CACHE_MS) return tableCache.value;
+  let value: TableNames;
+  try {
+    const res = await fetch(`${WIX_API}/table-reservations/reservation-locations/v1/reservation-locations`, {
+      headers: { Authorization: apiKey, 'wix-site-id': SITE_ID },
+    });
+    if (res.status === 401 || res.status === 403) value = { names: new Map(), status: 'permission' };
+    else if (!res.ok) value = { names: new Map(), status: 'error' };
+    else {
+      const body = (await res.json()) as {
+        reservationLocations?: { tableManagement?: { tableDefinitions?: TableDef[]; deletedTableDefinitions?: TableDef[] } }[];
+      };
+      const names = new Map<string, string>();
+      for (const loc of body.reservationLocations ?? []) {
+        for (const d of [...(loc.tableManagement?.deletedTableDefinitions ?? []), ...(loc.tableManagement?.tableDefinitions ?? [])]) {
+          const id = d._id ?? d.id;
+          if (id && typeof d.name === 'string' && d.name.trim()) names.set(id, d.name.trim());
+        }
+      }
+      value = { names, status: 'ok' };
+    }
+  } catch {
+    value = { names: new Map(), status: 'error' };
+  }
+  // do not remember a failure for long: the owner may be adding the permission right now
+  tableCache = { at: value.status === 'ok' ? Date.now() : Date.now() - TABLE_CACHE_MS + 30_000, value };
+  return value;
+}
+
+interface TableDef {
+  _id?: string;
+  id?: string;
+  name?: string;
+}
+
 interface Reservation {
   id: string;
   time: string;
@@ -135,9 +177,11 @@ interface Reservation {
   teamMessage: string;
   /** Wix table ids (names are not in the API; the app maps them to table numbers). */
   tableIds: string[];
+  /** Table names from Wix, same order as tableIds ('' = Wix did not give a name). */
+  tableNames: string[];
 }
 
-function normalise(list: WixReservation[], date: string): Reservation[] {
+function normalise(list: WixReservation[], date: string, tables: Map<string, string>): Reservation[] {
   const out: Reservation[] = [];
   for (const r of list) {
     const start = r.details?.startDate;
@@ -148,6 +192,7 @@ function normalise(list: WixReservation[], date: string): Reservation[] {
       .filter((v): v is string => typeof v === 'string')
       .map((v) => v.trim())
       .filter(Boolean);
+    const tableIds = [...new Set([...(r.details?.tableIds ?? []), ...(r.details?.tables?.ids ?? [])])].filter((x) => typeof x === 'string');
     out.push({
       id: r.id ?? `${start}-${out.length}`,
       time: localParts(when).time,
@@ -157,7 +202,8 @@ function normalise(list: WixReservation[], date: string): Reservation[] {
       status: r.status ?? '',
       notes,
       teamMessage: (r.teamMessage ?? '').trim(),
-      tableIds: [...new Set([...(r.details?.tableIds ?? []), ...(r.details?.tables?.ids ?? [])])].filter((x) => typeof x === 'string'),
+      tableIds,
+      tableNames: tableIds.map((id) => tables.get(id) ?? ''),
     });
   }
   return out.sort((a, b) => a.start.localeCompare(b.start));
@@ -207,11 +253,13 @@ Deno.serve(async (req) => {
       if (cache.size > 20) cache.delete(cache.keys().next().value as string);
     }
 
+    const tables = await fetchTableNames(apiKey);
     return json({
       configured: true,
       date,
       fetchedAt: new Date(hit.at).toISOString(),
-      reservations: normalise(hit.raw, date),
+      tableNamesStatus: tables.status,
+      reservations: normalise(hit.raw, date, tables.names),
       ...(body.debug && me.role === 'manager' ? { debug: debugInfo(hit.raw) } : {}),
     });
   } catch (e) {

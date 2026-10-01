@@ -5,7 +5,7 @@ import { WEEKDAY_NAMES, addDays, weekIndex } from '../../lib/dates';
 import { useBusinessDate } from '../../lib/useBusinessDate';
 import type { Settings, Task } from '../../lib/types';
 import { seedSettings, seedTasks } from '../../seed/tasks';
-import { t } from '../../lib/i18n';
+import { pruneEn, suggestEn, t, tl } from '../../lib/i18n';
 
 export default function AdminTasks() {
   const today = useBusinessDate();
@@ -77,7 +77,7 @@ export default function AdminTasks() {
             {list.length === 0 && <p className="muted small-text">{t('אין משימות.')}</p>}
             {list.map((task) => (
               <button key={task.id} type="button" className={`card task-pick${task.active ? '' : ' off'}`} onClick={() => setEditing(task)}>
-                <span>{t(task.title)}</span>
+                <span>{tl(task.title, task.titleEn)}</span>
                 <span className="chips">
                   {task.everyNWeeks === 2 && <span className="chip">{t('שבוע')}{' '}{task.weekOffset === 0 ? t('א׳') : t('ב׳')}{' '}{t('(אחת לשבועיים)')}</span>}
                   {!task.active && <span className="chip">{t('כבויה')}</span>}
@@ -111,17 +111,19 @@ function TaskEditor({
       className="form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (f.title.trim()) void onSave({ ...f, title: f.title.trim() });
+        if (f.title.trim()) void onSave(pruneEn({ ...f, title: f.title.trim() }, ['titleEn', 'descriptionEn']));
       }}
     >
       <h1>{isNew ? t('משימה חדשה') : t('עריכת משימה')}</h1>
       <label>
         {t('שם המשימה')}
         <input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} required />
+        <input dir="ltr" value={f.titleEn ?? ''} onChange={(e) => setF({ ...f, titleEn: e.target.value })} aria-label={t('שם המשימה באנגלית')} placeholder={suggestEn(f.title) || t('גרסה באנגלית (לא חובה)')} />
       </label>
       <label>
         {t('הסבר לעובדים (איך עושים, עם מה, מה חשוב)')}
         <textarea rows={6} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
+        <textarea dir="ltr" rows={4} value={f.descriptionEn ?? ''} onChange={(e) => setF({ ...f, descriptionEn: e.target.value })} aria-label={t('הסבר באנגלית')} placeholder={t('גרסה באנגלית (לא חובה)')} />
       </label>
       <div className="row">
         <label style={{ flex: 1 }}>
