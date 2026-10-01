@@ -37,6 +37,12 @@ npm run build      # בנייה ל-dist/ (אתר סטטי, אפשר לשים ב�
    ```
 4. בונים מחדש (`npm run build`) ומעלים את `dist/`.
 
+הכתובת והמפתח הציבורי של הפרויקט הנוכחי כבר ב-`.env.production`, ולכן בנייה ל-production מתחברת אוטומטית.
+
+### פרסום (בלי טרמינל)
+
+ב-[Netlify](https://www.netlify.com): Add new site ← Import an existing project ← GitHub ← בחירת המאגר `dr.ix` והענף. ההגדרות (`netlify.toml`) כבר בפנים. כל push חדש לענף מפרסם גרסה חדשה.
+
 **לפני שמזינים טיפים או נתוני קופה יש להחליף את הגישה הפתוחה לטבלה בשער מאובטח.** ראו [docs/security.md](docs/security.md).
 
 ## מבנה
