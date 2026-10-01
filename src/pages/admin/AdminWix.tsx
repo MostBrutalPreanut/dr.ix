@@ -1,12 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { diagnoseFunction, fetchReservations } from '../../lib/wix';
 import type { FunctionDiagnosis, WixState } from '../../lib/wix';
 import { useBusinessDate } from '../../lib/useBusinessDate';
-import { useCollection } from '../../lib/db';
-import { addDays } from '../../lib/dates';
-import type { WixTable } from '../../lib/types';
-import type { Reservation, TableNamesStatus } from '../../lib/wix';
 import { t, tn } from '../../lib/i18n';
 
 const UNREACHABLE: Record<FunctionDiagnosis, string> = {
@@ -80,91 +76,6 @@ export default function AdminWix() {
           )}
         </div>
       )}
-      <TableNames today={today} />
     </>
-  );
-}
-
-/**
- * Wix gives each table only an id (no number). A manager names each table once, using the
- * reservations that sit at it (time + name) to recognise it.
- */
-function TableNames({ today }: { today: string }) {
-  const tables = useCollection<WixTable>('wixTables');
-  const [seen, setSeen] = useState<Reservation[]>([]);
-  const [ready, setReady] = useState(false);
-  const [status, setStatus] = useState<TableNamesStatus | undefined>();
-
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      const days = [today, addDays(today, 1), addDays(today, 2)];
-      const all: Reservation[] = [];
-      let statusSeen: TableNamesStatus | undefined;
-      for (const d of days) {
-        const r = await fetchReservations(d);
-        if (r.state === 'ok' && r.tableNamesStatus && !statusSeen) statusSeen = r.tableNamesStatus;
-        if (r.state === 'ok') all.push(...r.reservations.map((x) => ({ ...x, time: `${d.slice(8)}/${d.slice(5, 7)} ${x.time}` })));
-      }
-      if (alive) {
-        setSeen(all);
-        setStatus(statusSeen);
-        setReady(true);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [today]);
-
-  // ids Wix gave no name for (when Wix names them, nothing needs typing here)
-  const ids = [...new Set(seen.flatMap((r) => (r.tableIds ?? []).filter((_id, i) => !r.tableNames?.[i])))];
-  const label = (id: string) => tables.items.find((t) => t.id === id)?.label ?? '';
-  const save = (id: string, value: string) => {
-    const v = value.trim();
-    if (v === label(id)) return;
-    if (v) void tables.save({ id, label: v });
-    else void tables.remove(id);
-  };
-
-  return (
-    <section>
-      <h2>{t('🪑 מספרי שולחנות')}</h2>
-      {ready && status === 'ok' && ids.length === 0 && seen.some((r) => r.tableIds?.length) && (
-        <p className="muted small-text">{t('✓ מספרי השולחנות נלקחים אוטומטית מ-Wix. אין מה להגדיר כאן.')}</p>
-      )}
-      {ready && status === 'permission' && (
-        <p className="banner-warn">
-          {t('Wix לא נתנה לקרוא את שמות השולחנות. ב-Wix, בהגדרות מפתח ה-API, הוסיפו את ההרשאה Read Reservation Locations (Full) ושמרו. אחרי זה השמות יופיעו לבד. עד אז אפשר להקליד מספר לכל שולחן כאן.')}
-        </p>
-      )}
-      {ready && status === 'error' && <p className="muted small-text">{t('לא הצלחנו לקרוא את שמות השולחנות מ-Wix כרגע.')}</p>}
-      {ids.length > 0 && (
-        <p className="muted small-text">
-          {t('שולחנות ש-Wix לא נתנה להם שם: כתבו כאן את המספר של כל שולחן, פעם אחת. כדי לזהות אותו מופיעות ההזמנות שיושבות בו.')}
-        </p>
-      )}
-      {!ready && <p className="muted">{t('בודק הזמנות קרובות…')}</p>}
-      {ready && ids.length === 0 && !seen.some((r) => r.tableIds?.length) && (
-        <p className="muted small-text">{t('אין כרגע הזמנות עם שולחן משויך (היום ובימים הקרובים). ברגע ש-Wix משייכת שולחן להזמנה הוא יופיע כאן.')}</p>
-      )}
-      <div className="stack">
-        {ids.map((id) => (
-          <div key={id} className="card form">
-            <span className="muted small-text">
-              {seen
-                .filter((r) => r.tableIds?.includes(id))
-                .slice(0, 3)
-                .map((r) => `${r.time} ${r.firstName || '?'} (${r.partySize})`)
-                .join(' · ')}
-            </span>
-            <label>
-              {t('מספר שולחן')}
-              <input key={`${id}-${label(id)}`} defaultValue={label(id)} placeholder={t('למשל: 7')} onBlur={(e) => save(id, e.target.value)} />
-            </label>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }

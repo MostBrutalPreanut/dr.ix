@@ -46,7 +46,6 @@ https://manage.wix.com/dashboard/12345678-abcd-....-....-............/home
 | מה אנחנו רוצים | הרשאה | נקודת הקצה שנשתמש בה |
 |---|---|---|
 | ההזמנות להיום, כולל הערות הלקוח (`teamMessage`) | **Manage Reservations (Medium)**: `SCOPE.DC-RESERVATIONS.MANAGE-RESERVATIONS-MEDIUM` | `POST https://www.wixapis.com/table-reservations/reservations/v1/reservations/query` |
-| שמות/מספרי השולחנות (מוצגים ליד כמות האורחים) | **Read Reservation Locations (Full)** (או Basic): `SCOPE.DC-RESERVATIONS.READ-LOCATIONS-FULL` | `GET https://www.wixapis.com/table-reservations/reservation-locations/v1/reservation-locations` (שם כל שולחן ב-`tableManagement.tableDefinitions`) |
 | רשימת אירועים קרובים | **Read Events** | `POST https://www.wixapis.com/events/v3/events/query` |
 | מי קנה כרטיסים לאירוע | הרשאות קריאה של Events (הזמנות ואורחים) | `GET https://www.wixapis.com/events/v1/orders` |
 

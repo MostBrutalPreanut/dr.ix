@@ -13,10 +13,6 @@ export interface Reservation {
   notes: string[];
   /** What the staff wrote under "Team notes" in Wix. */
   teamMessage: string;
-  /** Wix table ids (see the table-number mapping in the Wix admin screen). */
-  tableIds: string[];
-  /** Table names as set in Wix, same order as tableIds ('' = no name known). */
-  tableNames: string[];
 }
 
 export interface WixDebug {
@@ -26,15 +22,12 @@ export interface WixDebug {
   customFields: Record<string, string[]>;
 }
 
-/** ok = names come from Wix; permission = the API key may not read them; error = Wix did not answer */
-export type TableNamesStatus = 'ok' | 'permission' | 'error';
-
 export type WixState =
   | { state: 'off' } // local demo mode: no server
   | { state: 'loading' }
   | { state: 'not_configured' }
   | { state: 'error'; reason: 'wix_auth' | 'wix_error' | 'unreachable'; detail?: string }
-  | { state: 'ok'; reservations: Reservation[]; fetchedAt: string; tableNamesStatus?: TableNamesStatus; debug?: WixDebug };
+  | { state: 'ok'; reservations: Reservation[]; fetchedAt: string; debug?: WixDebug };
 
 /** Asks the "wix" server function for the reservations of a business day. */
 export async function fetchReservations(date: string, debug = false): Promise<WixState> {
@@ -58,7 +51,6 @@ export async function fetchReservations(date: string, debug = false): Promise<Wi
       detail?: string;
       reservations?: Reservation[];
       fetchedAt?: string;
-      tableNamesStatus?: TableNamesStatus;
       debug?: WixDebug;
     };
     if (body.configured === false) return { state: 'not_configured' };
@@ -66,7 +58,7 @@ export async function fetchReservations(date: string, debug = false): Promise<Wi
       return { state: 'error', reason: body.error, detail: body.detail };
     }
     if (!res.ok || !body.reservations) return { state: 'error', reason: 'unreachable' };
-    return { state: 'ok', reservations: body.reservations, fetchedAt: body.fetchedAt ?? '', tableNamesStatus: body.tableNamesStatus, debug: body.debug };
+    return { state: 'ok', reservations: body.reservations, fetchedAt: body.fetchedAt ?? '', debug: body.debug };
   } catch {
     return { state: 'error', reason: 'unreachable' };
   }

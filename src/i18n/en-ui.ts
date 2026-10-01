@@ -52,7 +52,6 @@ export const UI: Record<string, string> = {
   'ישבו': 'Seated',
   'הסתיימה': 'Finished',
   'ללא שם': 'No name',
-  'שולחן {p1}': 'Table {p1}',
   'בדיקת חיבור Wix': 'Check the Wix connection',
   '📅 הזמנות להיום': "📅 Today's bookings",
   'עם הערות': 'with notes',
@@ -417,15 +416,6 @@ export const UI: Record<string, string> = {
   'סטטוסים:': 'Statuses:',
   'אין': 'none',
   '· הערות צוות (Team notes):': '· team notes:',
-  '🪑 מספרי שולחנות': '🪑 Table numbers',
-  '✓ מספרי השולחנות נלקחים אוטומטית מ-Wix. אין מה להגדיר כאן.': '✓ Table numbers are taken from Wix automatically. Nothing to set up here.',
-  'Wix לא נתנה לקרוא את שמות השולחנות. ב-Wix, בהגדרות מפתח ה-API, הוסיפו את ההרשאה Read Reservation Locations (Full) ושמרו. אחרי זה השמות יופיעו לבד. עד אז אפשר להקליד מספר לכל שולחן כאן.': 'Wix did not allow reading the table names. In Wix, in the API key settings, add the permission Read Reservation Locations (Full) and save. After that the names will appear by themselves. Until then you can type a number for each table here.',
-  'לא הצלחנו לקרוא את שמות השולחנות מ-Wix כרגע.': 'We could not read the table names from Wix right now.',
-  'שולחנות ש-Wix לא נתנה להם שם: כתבו כאן את המספר של כל שולחן, פעם אחת. כדי לזהות אותו מופיעות ההזמנות שיושבות בו.': 'Tables Wix gave no name: write the number of each table here, once. The bookings seated at it are shown to help you recognise it.',
-  'בודק הזמנות קרובות…': 'Checking upcoming bookings…',
-  'אין כרגע הזמנות עם שולחן משויך (היום ובימים הקרובים). ברגע ש-Wix משייכת שולחן להזמנה הוא יופיע כאן.': 'There are no bookings with an assigned table right now (today and the coming days). As soon as Wix assigns a table to a booking it will appear here.',
-  'מספר שולחן': 'Table number',
-  'למשל: 7': 'e.g. 7',
 
   // English fields of the editors
   'גרסה באנגלית (לא חובה)': 'English version (optional)',

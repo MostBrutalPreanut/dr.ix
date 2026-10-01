@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { useCollection } from '../lib/db';
 import { useReservations } from '../lib/wix';
 import type { Reservation } from '../lib/wix';
-import type { WixTable } from '../lib/types';
 import { t, tn } from '../lib/i18n';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -19,18 +17,7 @@ export function guestTotals(list: Reservation[]) {
   return { guests, waiting, bookings: list.length };
 }
 
-/** Table numbers of a reservation; ids nobody named yet show "?" to managers only. */
-function tableLabels(r: Reservation, names: Map<string, string>, isManager: boolean): string[] {
-  const out: string[] = [];
-  (r.tableIds ?? []).forEach((id, i) => {
-    const label = r.tableNames?.[i] || names.get(id); // the name from Wix, else the one a manager typed
-    if (label) out.push(label);
-    else if (isManager) out.push('?');
-  });
-  return out;
-}
-
-function ReservationCard({ r, tables }: { r: Reservation; tables: string[] }) {
+function ReservationCard({ r }: { r: Reservation }) {
   const hasNote = r.notes.length > 0 || r.teamMessage !== '';
   const quiet = r.status === 'SEATED' || r.status === 'FINISHED';
   return (
@@ -39,7 +26,6 @@ function ReservationCard({ r, tables }: { r: Reservation; tables: string[] }) {
         <strong className="res-time">{r.time}</strong>
         <span className="res-name">{r.firstName || t('ללא שם')}</span>
         <span className="chip">👥 {r.partySize}</span>
-        {tables.length > 0 && <span className="chip">🪑 {tables.includes('?') ? <Link to="/admin/wix">?</Link> : t('שולחן {p1}', { p1: tables.join(', ') })}</span>}
         {t(STATUS_LABEL[r.status]) && <span className={`chip${r.status === 'REQUESTED' ? ' red' : ' soft'}`}>{t(STATUS_LABEL[r.status])}</span>}
       </div>
       {r.notes.map((n, i) => (
@@ -52,17 +38,10 @@ function ReservationCard({ r, tables }: { r: Reservation; tables: string[] }) {
   );
 }
 
-/** Wix table id -> the number written in the cafe (filled in once by a manager). */
-export function useWixTableNames(): Map<string, string> {
-  const { items } = useCollection<WixTable>('wixTables');
-  return new Map(items.map((t) => [t.id, t.label]));
-}
-
 /** "Today's reservations" - guests' requests are easy to miss in the Wix dashboard, so they live here. */
 export function Reservations({ date, showTitle = true }: { date: string; showTitle?: boolean }) {
   const { isManager } = useAuth();
   const wix = useReservations(date);
-  const names = useWixTableNames();
 
   if (wix.state === 'off') return null;
   // employees are not shown a setup problem - the section simply is not there until it works
@@ -107,7 +86,7 @@ export function Reservations({ date, showTitle = true }: { date: string; showTit
           </div>
         );
       })()}
-      {wix.state === 'ok' && wix.reservations.map((r) => <ReservationCard key={r.id} r={r} tables={tableLabels(r, names, isManager)} />)}
+      {wix.state === 'ok' && wix.reservations.map((r) => <ReservationCard key={r.id} r={r} />)}
     </section>
   );
 }

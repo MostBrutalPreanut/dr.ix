@@ -252,7 +252,3 @@ export interface TipWorkerDoc extends Doc {
   at: string;
 }
 
-/** What a Wix table id means in the cafe (Wix does not give names through its API). */
-export interface WixTable extends Doc {
-  label: string;
-}
