@@ -151,7 +151,7 @@ export default function Today() {
       <ReservationsSummary date={today} />
 
       <Link to="/tips" className="card summary-line">
-        <span>💰 <strong>טיפים</strong> - הוספת סכום בסוף משמרת והחלק שלי</span>
+        <span>💰 <strong>טיפים</strong> - הזנת סכום בסוף משמרת</span>
         <span className="muted">←</span>
       </Link>
 
