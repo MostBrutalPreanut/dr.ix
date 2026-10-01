@@ -94,7 +94,14 @@ async function queryWix(apiKey: string, date: string): Promise<WixReservation[]>
     const query = cursor
       ? { cursorPaging: { limit: 100, cursor } }
       : {
-          filter: { 'details.startDate': { $gte: from, $lte: to }, status: { $in: SHOWN } },
+          // several conditions (and two operators on one field) must be combined with $and
+          filter: {
+            $and: [
+              { 'details.startDate': { $gte: from } },
+              { 'details.startDate': { $lte: to } },
+              { status: { $in: SHOWN } },
+            ],
+          },
           sort: [{ fieldName: 'details.startDate', order: 'ASC' }],
           cursorPaging: { limit: 100 },
         };

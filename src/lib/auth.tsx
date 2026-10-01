@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { isShared, setSeedAllowed } from './db';
+import { clearDataCache, isShared, setSeedAllowed } from './db';
 import { employeeApi as api } from './employeesApi';
 import type { ActionResult, LoginResult } from './employeesApi';
 import { setUnauthorizedHandler } from './session';
@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyUser = useCallback((u: PublicEmployee | null) => {
     // Only a signed-in manager may write the starting content of the shared server.
+    if (!u) clearDataCache();
     const mayWrite = !isShared || u?.role === 'manager';
     setSeedAllowed(mayWrite);
     if (u && mayWrite) void seedAll().catch(() => undefined);

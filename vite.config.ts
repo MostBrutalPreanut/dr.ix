@@ -1,9 +1,21 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { execSync } from 'node:child_process';
+
+function buildId(): string {
+  const fromHost = process.env.COMMIT_REF?.slice(0, 7); // Netlify
+  if (fromHost) return fromHost;
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return 'dev';
+  }
+}
 
 export default defineConfig({
   base: './',
+  define: { __BUILD__: JSON.stringify(buildId()) },
   plugins: [
     react(),
     VitePWA({

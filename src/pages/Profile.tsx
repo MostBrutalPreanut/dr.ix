@@ -62,6 +62,7 @@ export default function Profile() {
         </p>
       </section>
 
+      <p className="muted small-text center">גרסה {__BUILD__}</p>
       <button type="button" className="danger wide" onClick={logout}>
         התנתקות
       </button>

@@ -876,3 +876,23 @@ code {
   padding: 0 0.3rem;
   border-radius: 6px;
 }
+
+.banner-warn {
+  margin: 0.5rem 1rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: var(--red-bg);
+  color: var(--ink);
+  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+.banner-warn small {
+  flex-basis: 100%;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  direction: ltr;
+  text-align: left;
+}

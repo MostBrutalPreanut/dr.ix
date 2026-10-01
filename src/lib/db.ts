@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Doc } from './types';
 import { isShared, poll, rpc } from './gateway';
+import { reportFail, reportOk } from './connection';
 
 export { isShared };
 
@@ -101,6 +102,12 @@ export function newId(): string {
     : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** Last answer per collection (and id range). Dropped on sign-out so the next person starts clean. */
+const cache = new Map<string, Doc[]>();
+export function clearDataCache(): void {
+  cache.clear();
+}
+
 const seeding = new Map<string, Promise<Doc[]>>();
 
 type Seed<T> = () => T[] | Promise<T[]>;
@@ -141,26 +148,32 @@ export async function seedIfEmpty<T extends Doc>(name: string, rows: T[], seed: 
  * starting content (written once - a marker stops it from coming back after deletions).
  */
 export function useCollection<T extends Doc>(name: string, seed?: Seed<T>, range?: IdRange) {
-  const [items, setItems] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const from = range?.from;
+  const to = range?.to;
+  const cacheKey = `${name}|${from ?? ''}|${to ?? ''}`;
+  // A screen visited before opens instantly with what we already have, and refreshes behind the scenes.
+  const [items, setItems] = useState<T[]>(() => (cache.get(cacheKey) as T[] | undefined) ?? []);
+  const [loading, setLoading] = useState(() => !cache.has(cacheKey));
   const [error, setError] = useState<string | null>(null);
   const seedRef = useRef(seed);
   seedRef.current = seed;
-  const from = range?.from;
-  const to = range?.to;
 
   const load = useCallback(async () => {
     try {
       let rows = (await backend.list(name, from !== undefined && to !== undefined ? { from, to } : undefined)) as T[];
       if (seedRef.current) rows = await seedIfEmpty(name, rows, seedRef.current);
+      cache.set(cacheKey, rows);
       setItems(rows);
       setError(null);
+      reportOk();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const message = e instanceof Error ? e.message : String(e);
+      setError(message);
+      if (!/unauthorized/i.test(message)) reportFail(message); // a sign-out is handled elsewhere
     } finally {
       setLoading(false);
     }
-  }, [name, from, to]);
+  }, [name, from, to, cacheKey]);
 
   useEffect(() => {
     void load();

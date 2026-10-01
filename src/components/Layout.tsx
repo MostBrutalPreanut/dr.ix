@@ -3,6 +3,8 @@ import { NavLink, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { isShared } from '../lib/db';
 import logoUrl from '../assets/logo.png';
+import { useConnection } from '../lib/connection';
+import { ErrorBoundary } from './ErrorBoundary';
 
 export function Logo({ size = 40, className = '' }: { size?: number; className?: string }) {
   return <img src={logoUrl} width={size} height={size} alt="DR IX" className={className} />;
@@ -11,6 +13,7 @@ export function Logo({ size = 40, className = '' }: { size?: number; className?:
 export function Layout() {
   const { user, isManager } = useAuth();
   const { pathname } = useLocation();
+  const connection = useConnection();
   // a new screen always starts at the top (the header is sticky, so a kept scroll position would hide the title)
   useEffect(() => window.scrollTo(0, 0), [pathname]);
   return (
@@ -52,8 +55,19 @@ export function Layout() {
           מצב מקומי: הנתונים נשמרים רק במכשיר הזה. כדי לעבוד יחד מכמה מכשירים יש לחבר Supabase.
         </div>
       )}
+      {!connection.ok && (
+        <div className="banner-warn" role="status">
+          <strong>יש בעיה בטעינת נתונים מהשרת.</strong> מנסה שוב אוטומטית.
+          <small className="block">{connection.message}</small>
+          <button type="button" className="small" onClick={() => window.location.reload()}>
+            רענן
+          </button>
+        </div>
+      )}
       <main className="content">
-        <Outlet />
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );
