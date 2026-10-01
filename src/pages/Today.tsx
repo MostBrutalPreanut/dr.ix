@@ -10,7 +10,7 @@ import type { Checklist, ChecklistCheck, ChecklistClosure, Note, NoteAck, Settin
 import { seedChecklists } from '../seed/checklists';
 import { seedSettings, seedTasks } from '../seed/tasks';
 import { NoteComposer } from '../components/NoteComposer';
-import { Reservations } from '../components/Reservations';
+import { ReservationsSummary } from '../components/Reservations';
 
 export default function Today() {
   const { user, isManager, employees } = useAuth();
@@ -119,7 +119,7 @@ export default function Today() {
         })}
       </section>
 
-      <Reservations date={today} />
+      <ReservationsSummary date={today} />
 
       <section>
         <h2>✅ נהלי פתיחה וסגירה</h2>

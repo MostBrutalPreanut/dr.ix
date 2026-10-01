@@ -816,9 +816,30 @@ input[type='checkbox'] {
 .row > * {
   min-width: 0;
 }
-button,
-.chip {
+/* short controls stay on one line; anything that holds real text (list rows, titles) must wrap */
+.chip,
+button.small,
+.tabbar a,
+.stepper button,
+.pinpad .keys button,
+.seg button,
+.composer button,
+.people button {
   white-space: nowrap;
+}
+button {
+  white-space: normal;
+}
+.li,
+.li-body,
+.task-title,
+.task-pick,
+.game-head h3,
+.note-text {
+  min-width: 0;
+}
+.task-pick {
+  flex-wrap: wrap;
 }
 .task-title,
 .li-text,
@@ -895,4 +916,32 @@ code {
   overflow-wrap: anywhere;
   direction: ltr;
   text-align: left;
+}
+
+/* one-line reservations summary on Today */
+.summary-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  text-decoration: none;
+}
+.summary-line.has-note {
+  border-inline-start: 5px solid var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 8%, var(--card));
+}
+
+/* five tabs on a phone: icon above the label */
+@media (max-width: 480px) {
+  .tabbar a {
+    flex-direction: column;
+    gap: 0;
+    padding: 0.4rem 0.1rem 0.45rem;
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+  .tabbar .ico {
+    font-size: 1.2rem;
+  }
 }

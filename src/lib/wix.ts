@@ -85,19 +85,30 @@ export async function diagnoseFunction(): Promise<FunctionDiagnosis> {
   }
 }
 
+const lastAnswer = new Map<string, WixState>();
+
+/** Forget the last answers (called at sign-out). */
+export function clearWixCache(): void {
+  lastAnswer.clear();
+}
+
 /** Today's reservations, refreshed every minute and when the app comes back to the foreground. */
 export function useReservations(date: string): WixState {
-  const [state, setState] = useState<WixState>(isShared ? { state: 'loading' } : { state: 'off' });
+  const [state, setState] = useState<WixState>(() => lastAnswer.get(date) ?? (isShared ? { state: 'loading' } : { state: 'off' }));
 
   const load = useCallback(async () => {
     const next = await fetchReservations(date);
     // a hiccup must not wipe a list that is already on screen
-    setState((prev) => (next.state === 'error' && prev.state === 'ok' ? prev : next));
+    setState((prev) => {
+      const shown = next.state === 'error' && prev.state === 'ok' ? prev : next;
+      lastAnswer.set(date, shown);
+      return shown;
+    });
   }, [date]);
 
   useEffect(() => {
     if (!isShared) return;
-    setState({ state: 'loading' });
+    setState((prev) => (prev.state === 'ok' ? prev : lastAnswer.get(date) ?? { state: 'loading' }));
     void load();
     return poll(() => void load(), 60_000);
   }, [date, load]);

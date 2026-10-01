@@ -8,6 +8,7 @@ import ChecklistPage from './pages/ChecklistPage';
 import { HandbookList, HandbookSectionPage } from './pages/Handbook';
 import Games from './pages/Games';
 import Profile from './pages/Profile';
+import ReservationsPage from './pages/ReservationsPage';
 import AdminHome from './pages/admin/AdminHome';
 import AdminNotes from './pages/admin/AdminNotes';
 import AdminEmployees from './pages/admin/AdminEmployees';
@@ -25,6 +26,7 @@ function Gate() {
       <Route element={<Layout />}>
         <Route index element={<Today />} />
         <Route path="checklist/:id" element={<ChecklistPage />} />
+        <Route path="reservations" element={<ReservationsPage />} />
         <Route path="handbook" element={<HandbookList />} />
         <Route path="handbook/:id" element={<HandbookSectionPage />} />
         <Route path="games" element={<Games />} />

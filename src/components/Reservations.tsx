@@ -31,7 +31,7 @@ function ReservationCard({ r }: { r: Reservation }) {
 }
 
 /** "Today's reservations" - guests' requests are easy to miss in the Wix dashboard, so they live here. */
-export function Reservations({ date }: { date: string }) {
+export function Reservations({ date, showTitle = true }: { date: string; showTitle?: boolean }) {
   const { isManager } = useAuth();
   const wix = useReservations(date);
 
@@ -49,7 +49,7 @@ export function Reservations({ date }: { date: string }) {
   return (
     <section>
       <div className="section-head">
-        <h2>📅 הזמנות להיום{wix.state === 'ok' ? ` (${wix.reservations.length})` : ''}</h2>
+        {showTitle ? <h2>📅 הזמנות להיום{wix.state === 'ok' ? ` (${wix.reservations.length})` : ''}</h2> : <span />}
         {wix.state === 'ok' && wix.reservations.some((r) => r.notes.length || r.teamMessage) && (
           <span className="chip red">
             📝 {wix.reservations.filter((r) => r.notes.length || r.teamMessage).length} עם הערות
@@ -69,5 +69,29 @@ export function Reservations({ date }: { date: string }) {
       {wix.state === 'ok' && wix.reservations.length === 0 && <p className="muted empty">אין הזמנות להיום.</p>}
       {wix.state === 'ok' && wix.reservations.map((r) => <ReservationCard key={r.id} r={r} />)}
     </section>
+  );
+}
+
+/**
+ * One quiet line on the Today screen: how many reservations, and a pointer when some carry notes.
+ * The full list lives in its own tab so it never pushes the tasks and checklists out of view.
+ */
+export function ReservationsSummary({ date }: { date: string }) {
+  const wix = useReservations(date);
+  if (wix.state !== 'ok' || wix.reservations.length === 0) return null;
+  const withNotes = wix.reservations.filter((r) => r.notes.length || r.teamMessage).length;
+  return (
+    <Link to="/reservations" className={`card summary-line${withNotes ? ' has-note' : ''}`}>
+      <span>
+        📅 <strong>{wix.reservations.length}</strong> הזמנות היום
+        {withNotes > 0 && (
+          <>
+            {' '}
+            · <strong>{withNotes}</strong> עם הערות
+          </>
+        )}
+      </span>
+      <span className="muted">לצפייה ←</span>
+    </Link>
   );
 }

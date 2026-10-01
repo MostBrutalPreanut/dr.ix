@@ -4,6 +4,7 @@ import { clearDataCache, isShared, setSeedAllowed } from './db';
 import { employeeApi as api } from './employeesApi';
 import type { ActionResult, LoginResult } from './employeesApi';
 import { setUnauthorizedHandler } from './session';
+import { clearWixCache } from './wix';
 import { seedAll } from '../seed';
 import type { PublicEmployee, Role } from './types';
 
@@ -32,7 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyUser = useCallback((u: PublicEmployee | null) => {
     // Only a signed-in manager may write the starting content of the shared server.
-    if (!u) clearDataCache();
+    if (!u) {
+      clearDataCache();
+      clearWixCache();
+    }
     const mayWrite = !isShared || u?.role === 'manager';
     setSeedAllowed(mayWrite);
     if (u && mayWrite) void seedAll().catch(() => undefined);

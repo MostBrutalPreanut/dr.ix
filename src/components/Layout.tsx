@@ -38,6 +38,12 @@ export function Layout() {
             <span className="ico">📋</span>
             <span>היום</span>
           </NavLink>
+          {isShared && (
+            <NavLink to="/reservations">
+              <span className="ico">📅</span>
+              <span>הזמנות</span>
+            </NavLink>
+          )}
           <NavLink to="/handbook">
             <span className="ico">📖</span>
             <span>נהלים</span>
