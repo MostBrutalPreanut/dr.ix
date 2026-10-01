@@ -102,7 +102,7 @@ returns public.employees
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees;
 begin
@@ -116,17 +116,17 @@ begin
   end if;
   return e;
 end;
-$$;
+$fn$;
 
 create or replace function public._employee_json(e public.employees)
 returns jsonb
 language sql
 immutable
-as $$
+as $fn$
   select jsonb_build_object(
     'id', e.id, 'name', e.name, 'role', e.role,
     'mustChangePin', e.must_change_pin, 'createdAt', e.created_at);
-$$;
+$fn$;
 
 -- ---------- sign in / out ----------------------------------------------------------
 
@@ -136,19 +136,19 @@ returns jsonb
 language sql
 security definer
 set search_path = public
-as $$
+as $fn$
   select coalesce(
     jsonb_agg(jsonb_build_object('id', id, 'name', name, 'role', role) order by name),
     '[]'::jsonb)
   from public.employees;
-$$;
+$fn$;
 
 create or replace function public.api_login(p_id text, p_pin text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees;
   v_token text;
@@ -179,27 +179,27 @@ begin
   update public.employees set failed_attempts = failed_attempts + 1 where id = e.id;
   return jsonb_build_object('ok', false, 'reason', 'bad_pin');
 end;
-$$;
+$fn$;
 
 create or replace function public.api_logout(p_token text)
 returns void
 language sql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
   delete from public.sessions where token_hash = encode(digest(coalesce(p_token, ''), 'sha256'), 'hex');
-$$;
+$fn$;
 
 create or replace function public.api_me(p_token text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 begin
   return public._employee_json(public._auth(p_token));
 end;
-$$;
+$fn$;
 
 -- ---------- employees --------------------------------------------------------------
 
@@ -208,25 +208,25 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 begin
   perform public._auth(p_token);
   return coalesce(
     (select jsonb_agg(public._employee_json(e) order by e.name) from public.employees e),
     '[]'::jsonb);
 end;
-$$;
+$fn$;
 
 create or replace function public.api_set_pin(p_token text, p_pin text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
 begin
-  if p_pin !~ '^[0-9]{4}$' or p_pin = '0000' then
+  if length(coalesce(p_pin, '')) <> 4 or p_pin ~ '[^0-9]' or p_pin = '0000' then
     return jsonb_build_object('ok', false, 'reason', 'invalid_pin');
   end if;
   update public.employees
@@ -234,28 +234,28 @@ begin
    where id = e.id;
   return jsonb_build_object('ok', true);
 end;
-$$;
+$fn$;
 
 create or replace function public.api_skip_pin_change(p_token text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
 begin
   update public.employees set must_change_pin = false where id = e.id;
   return jsonb_build_object('ok', true);
 end;
-$$;
+$fn$;
 
 create or replace function public.api_add_employee(p_token text, p_name text, p_role text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
   v_name text := btrim(coalesce(p_name, ''));
@@ -271,14 +271,14 @@ begin
   values (gen_random_uuid()::text, v_name, p_role, crypt('0000', gen_salt('bf')));
   return jsonb_build_object('ok', true);
 end;
-$$;
+$fn$;
 
 create or replace function public.api_set_role(p_token text, p_id text, p_role text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
 begin
@@ -294,14 +294,14 @@ begin
   update public.employees set role = p_role where id = p_id;
   return jsonb_build_object('ok', true);
 end;
-$$;
+$fn$;
 
 create or replace function public.api_reset_pin(p_token text, p_id text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
 begin
@@ -313,14 +313,14 @@ begin
   delete from public.sessions where employee_id = p_id;
   return jsonb_build_object('ok', true);
 end;
-$$;
+$fn$;
 
 create or replace function public.api_remove_employee(p_token text, p_id text)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
 begin
@@ -335,7 +335,7 @@ begin
   delete from public.employees where id = p_id;
   return jsonb_build_object('ok', true);
 end;
-$$;
+$fn$;
 
 -- ---------- generic documents (notes, checklists, games ...) ------------------------
 
@@ -345,7 +345,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
   a public.acl;
@@ -365,14 +365,14 @@ begin
       limit 5000
     ) t), '[]'::jsonb);
 end;
-$$;
+$fn$;
 
 create or replace function public.api_upsert(p_token text, p_collection text, p_doc jsonb)
 returns void
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
   a public.acl;
@@ -392,14 +392,14 @@ begin
   values (p_collection, p_doc ->> 'id', p_doc, now())
   on conflict (collection, id) do update set data = excluded.data, updated_at = now();
 end;
-$$;
+$fn$;
 
 create or replace function public.api_remove(p_token text, p_collection text, p_id text)
 returns void
 language plpgsql
 security definer
 set search_path = public, extensions
-as $$
+as $fn$
 declare
   e public.employees := public._auth(p_token);
   a public.acl;
@@ -414,7 +414,7 @@ begin
   end if;
   delete from public.docs where collection = p_collection and id = p_id;
 end;
-$$;
+$fn$;
 
 -- ---------- who may call what -------------------------------------------------------
 
