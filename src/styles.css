@@ -16,7 +16,6 @@
   --red-bg: #4a2523;
   --on-accent: #1a1216;
   --radius: 14px;
-  --nav-h: 64px;
   color-scheme: dark;
 }
 
@@ -151,20 +150,22 @@ input[type='checkbox'] {
   max-width: 760px;
   margin: 0 auto;
   min-height: 100dvh;
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
 }
 
-.topbar {
+.site-header {
   position: sticky;
   top: 0;
   z-index: 10;
+  background: var(--bg);
+  padding-top: env(safe-area-inset-top);
+  border-bottom: 1px solid var(--line);
+}
+.topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
-  padding-top: calc(0.5rem + env(safe-area-inset-top));
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
+  padding: 0.5rem 1rem 0.25rem;
 }
 .brand img {
   display: block;
@@ -209,35 +210,30 @@ input[type='checkbox'] {
 }
 
 .tabbar {
-  position: fixed;
-  inset-inline: 0;
-  bottom: 0;
-  z-index: 10;
   display: flex;
   justify-content: center;
-  height: calc(var(--nav-h) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
-  background: var(--card);
-  border-top: 1px solid var(--line);
 }
 .tabbar a {
   flex: 1;
   max-width: 190px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.1rem;
+  gap: 0.4rem;
+  padding: 0.55rem 0.25rem;
+  border-bottom: 3px solid transparent;
   text-decoration: none;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 .tabbar a.active {
   color: var(--yellow);
   font-weight: 700;
+  border-bottom-color: var(--yellow);
 }
 .tabbar .ico {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   line-height: 1;
 }
 
@@ -644,7 +640,7 @@ input.age {
 }
 .sticky-save {
   position: sticky;
-  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 0.5rem);
+  bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
 }
 
 /* login */
