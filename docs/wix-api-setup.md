@@ -70,15 +70,32 @@ curl -X POST 'https://www.wixapis.com/table-reservations/reservations/v1/reserva
 
 ## מה האפליקציה תציג
 
-מתוך כל הזמנה: שעה (`details.startDate`), מספר סועדים (`details.partySize`), שם וטלפון (`reservee`), סטטוס (`status`), **הערת הלקוח (`teamMessage`)** ושדות מותאמים (`reservee.customFields`, למשל אלרגיות).
+מתוך כל הזמנה: שעה (`details.startDate`), מספר סועדים (`details.partySize`), שם פרטי, סטטוס (`status`) ושולחן.
+**ההערות:** שני מקורות.
+
+1. **הערת הלקוח.** לפי הצילום מהדשבורד שלכם, הלקוח כותב אותה בשדה "הערות" תחת **Additional details**. זה שדה מותאם בטופס ההזמנה, ולכן הוא מגיע ב-`reservee.customFields` (מפתח = מזהה השדה) ולא ב-`teamMessage`. נציג את כל השדות המותאמים שאינם ריקים.
+2. **הערות צוות** (`teamMessage`): מה שאתם כותבים בדשבורד תחת **Team notes**.
+
 ההזמנות שיש בהן הערה יודגשו במסך "היום", ויופיעו גם כהתראה בראש הדף.
+בכוונה לא נציג טלפון או מייל של הלקוח.
 
 ## מה אני צריך ממכם
 
-1. ה-**Site ID** (שלב 2).
-2. אישור שאתם משתמשים ב-**Table Reservations** וב-**Events** (שלב 1).
-3. כשהמפתח מוכן: **לא לשלוח אותו**. נעשה את זה יחד כשנגיע לשלב 3, ואני אסביר איך להכניס אותו ישירות ל-Supabase Secrets.
-4. אם אפשר: צילום מסך של שדות "Additional details" / הערות בהזמנה אחת אמיתית בדשבורד של Wix, כדי שנוודא שהערות הלקוחות באמת נשמרות בשדה `teamMessage` ולא בשדה מותאם.
+- ✅ **Site ID:** `3cba2a0c-6a93-489c-bdd5-700e5e07cba5` (התקבל).
+- ✅ אושר: משתמשים ב-**Table Reservations** וב-**Events**.
+- ✅ צילום של הזמנה אמיתית התקבל. ההערה היא שדה מותאם "הערות" ב-Additional details.
+- ⏳ **בדיקת מבנה (שלב 5 למעלה):** להריץ את הפקודה עם הסינון שבהמשך ולהדביק את התוצאה, כדי לראות איך השדה "הערות" מגיע ב-API.
+- ⏳ **המפתח:** לא לשלוח. נכניס אותו ל-Supabase Secrets אחרי שיהיה שער מאובטח ([security.md](security.md)).
+
+### פקודת בדיקה שמדפיסה רק הערות, בלי שמות וטלפונים
+
+```bash
+curl -s -X POST 'https://www.wixapis.com/table-reservations/reservations/v1/reservations/query' \
+  -H 'Authorization: <ה-API KEY>' -H 'wix-site-id: 3cba2a0c-6a93-489c-bdd5-700e5e07cba5' \
+  -H 'Content-Type: application/json' \
+  -d '{"query":{"cursorPaging":{"limit":20},"sort":[{"fieldName":"details.startDate","order":"DESC"}]}}' \
+  | python3 -c "import sys,json; [print({'team':r.get('teamMessage'),'custom':r.get('reservee',{}).get('customFields'),'ext':r.get('extendedFields')}) for r in json.load(sys.stdin).get('reservations',[])]"
+```
 
 ## מקורות
 
