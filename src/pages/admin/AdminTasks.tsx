@@ -5,6 +5,7 @@ import { WEEKDAY_NAMES, addDays, weekIndex } from '../../lib/dates';
 import { useBusinessDate } from '../../lib/useBusinessDate';
 import type { Settings, Task } from '../../lib/types';
 import { seedSettings, seedTasks } from '../../seed/tasks';
+import { t } from '../../lib/i18n';
 
 export default function AdminTasks() {
   const today = useBusinessDate();
@@ -26,7 +27,7 @@ export default function AdminTasks() {
           setEditing(null);
         }}
         onDelete={async () => {
-          if (confirm(`למחוק את "${editing.title}"?`)) {
+          if (confirm(t('למחוק את "{title}"?', { title: editing.title }))) {
             await tasks.remove(editing.id);
             setEditing(null);
           }
@@ -37,12 +38,12 @@ export default function AdminTasks() {
 
   return (
     <>
-      <Link to="/admin" className="back">← ניהול</Link>
-      <h1>🧹 משימות ניקיון</h1>
-      <p className="muted">לחצו על משימה כדי לערוך אותה ולכתוב הסבר לעובדים.</p>
+      <Link to="/admin" className="back">{t('← ניהול')}</Link>
+      <h1>{t('🧹 משימות ניקיון')}</h1>
+      <p className="muted">{t('לחצו על משימה כדי לערוך אותה ולכתוב הסבר לעובדים.')}</p>
 
       <div className="card">
-        <strong>משימות אחת לשבועיים:</strong> השבוע הוא <strong>שבוע {thisWeekIsA ? 'א׳' : 'ב׳'}</strong>.
+        <strong>{t('משימות אחת לשבועיים:')}</strong>{' '}{t('השבוע הוא')}{' '}<strong>{t('שבוע')}{' '}{thisWeekIsA ? t('א׳') : t('ב׳')}</strong>.
         <div className="row" style={{ marginTop: '.5rem' }}>
           <button
             type="button"
@@ -52,7 +53,7 @@ export default function AdminTasks() {
               void settings.save({ ...s, biweeklyAnchor: addDays(s.biweeklyAnchor, 7) });
             }}
           >
-            החלף ל{thisWeekIsA ? 'שבוע ב׳' : 'שבוע א׳'} (אם הסדר לא מתאים)
+            {t('החלף ל')}{thisWeekIsA ? t('שבוע ב׳') : t('שבוע א׳')}{' '}{t('(אם הסדר לא מתאים)')}
           </button>
         </div>
       </div>
@@ -62,7 +63,7 @@ export default function AdminTasks() {
         return (
           <section key={wd}>
             <div className="section-head">
-              <h2>יום {name}</h2>
+              <h2>{t('יום {day}', { day: t(name) })}</h2>
               <button
                 type="button"
                 className="small"
@@ -70,17 +71,17 @@ export default function AdminTasks() {
                   setEditing({ id: newId(), title: '', description: '', weekday: wd, everyNWeeks: 1, weekOffset: 0, active: true, order: tasks.items.length })
                 }
               >
-                + משימה
+                {t('+ משימה')}
               </button>
             </div>
-            {list.length === 0 && <p className="muted small-text">אין משימות.</p>}
-            {list.map((t) => (
-              <button key={t.id} type="button" className={`card task-pick${t.active ? '' : ' off'}`} onClick={() => setEditing(t)}>
-                <span>{t.title}</span>
+            {list.length === 0 && <p className="muted small-text">{t('אין משימות.')}</p>}
+            {list.map((task) => (
+              <button key={task.id} type="button" className={`card task-pick${task.active ? '' : ' off'}`} onClick={() => setEditing(task)}>
+                <span>{t(task.title)}</span>
                 <span className="chips">
-                  {t.everyNWeeks === 2 && <span className="chip">שבוע {t.weekOffset === 0 ? 'א׳' : 'ב׳'} (אחת לשבועיים)</span>}
-                  {!t.active && <span className="chip">כבויה</span>}
-                  {!t.description && <span className="chip soft">אין הסבר</span>}
+                  {task.everyNWeeks === 2 && <span className="chip">{t('שבוע')}{' '}{task.weekOffset === 0 ? t('א׳') : t('ב׳')}{' '}{t('(אחת לשבועיים)')}</span>}
+                  {!task.active && <span className="chip">{t('כבויה')}</span>}
+                  {!task.description && <span className="chip soft">{t('אין הסבר')}</span>}
                 </span>
               </button>
             ))}
@@ -104,66 +105,66 @@ function TaskEditor({
   onCancel(): void;
   onDelete(): Promise<void>;
 }) {
-  const [t, setT] = useState(task);
+  const [f, setF] = useState(task);
   return (
     <form
       className="form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (t.title.trim()) void onSave({ ...t, title: t.title.trim() });
+        if (f.title.trim()) void onSave({ ...f, title: f.title.trim() });
       }}
     >
-      <h1>{isNew ? 'משימה חדשה' : 'עריכת משימה'}</h1>
+      <h1>{isNew ? t('משימה חדשה') : t('עריכת משימה')}</h1>
       <label>
-        שם המשימה
-        <input value={t.title} onChange={(e) => setT({ ...t, title: e.target.value })} required />
+        {t('שם המשימה')}
+        <input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} required />
       </label>
       <label>
-        הסבר לעובדים (איך עושים, עם מה, מה חשוב)
-        <textarea rows={6} value={t.description} onChange={(e) => setT({ ...t, description: e.target.value })} />
+        {t('הסבר לעובדים (איך עושים, עם מה, מה חשוב)')}
+        <textarea rows={6} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
       </label>
       <div className="row">
         <label style={{ flex: 1 }}>
-          יום
-          <select value={t.weekday} onChange={(e) => setT({ ...t, weekday: Number(e.target.value) })}>
+          {t('יום')}
+          <select value={f.weekday} onChange={(e) => setF({ ...f, weekday: Number(e.target.value) })}>
             {WEEKDAY_NAMES.map((n, i) => (
               <option key={i} value={i}>
-                {n}
+                {t(n)}
               </option>
             ))}
           </select>
         </label>
         <label style={{ flex: 1 }}>
-          תדירות
-          <select value={t.everyNWeeks} onChange={(e) => setT({ ...t, everyNWeeks: Number(e.target.value) as 1 | 2 })}>
-            <option value={1}>כל שבוע</option>
-            <option value={2}>אחת לשבועיים</option>
+          {t('תדירות')}
+          <select value={f.everyNWeeks} onChange={(e) => setF({ ...f, everyNWeeks: Number(e.target.value) as 1 | 2 })}>
+            <option value={1}>{t('כל שבוע')}</option>
+            <option value={2}>{t('אחת לשבועיים')}</option>
           </select>
         </label>
-        {t.everyNWeeks === 2 && (
+        {f.everyNWeeks === 2 && (
           <label style={{ flex: 1 }}>
-            באיזה שבוע
-            <select value={t.weekOffset} onChange={(e) => setT({ ...t, weekOffset: Number(e.target.value) as 0 | 1 })}>
-              <option value={0}>שבוע א׳</option>
-              <option value={1}>שבוע ב׳</option>
+            {t('באיזה שבוע')}
+            <select value={f.weekOffset} onChange={(e) => setF({ ...f, weekOffset: Number(e.target.value) as 0 | 1 })}>
+              <option value={0}>{t('שבוע א׳')}</option>
+              <option value={1}>{t('שבוע ב׳')}</option>
             </select>
           </label>
         )}
       </div>
       <label className="inline check">
-        <input type="checkbox" checked={t.active} onChange={(e) => setT({ ...t, active: e.target.checked })} />
-        פעילה (תופיע לעובדים)
+        <input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} />
+        {t('פעילה (תופיע לעובדים)')}
       </label>
       <div className="row">
-        <button type="submit" className="primary" disabled={!t.title.trim()}>
-          שמור
+        <button type="submit" className="primary" disabled={!f.title.trim()}>
+          {t('שמור')}
         </button>
         <button type="button" onClick={onCancel}>
-          ביטול
+          {t('ביטול')}
         </button>
         {!isNew && (
           <button type="button" className="danger" onClick={() => void onDelete()}>
-            מחק
+            {t('מחק')}
           </button>
         )}
       </div>

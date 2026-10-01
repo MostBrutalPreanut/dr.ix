@@ -7,6 +7,7 @@ import { useBusinessDate } from '../../lib/useBusinessDate';
 import { AREA_LABEL } from '../../lib/types';
 import type { Note, NoteAck } from '../../lib/types';
 import { NoteComposer } from '../../components/NoteComposer';
+import { t } from '../../lib/i18n';
 
 export default function AdminNotes() {
   const today = useBusinessDate();
@@ -18,25 +19,25 @@ export default function AdminNotes() {
 
   return (
     <>
-      <Link to="/admin" className="back">← ניהול</Link>
-      <h1>📣 הערות למשמרת</h1>
+      <Link to="/admin" className="back">{t('← ניהול')}</Link>
+      <h1>{t('📣 הערות למשמרת')}</h1>
       <div className="row between datebar">
-        <button type="button" onClick={() => setDate(addDays(date, -1))} aria-label="היום הקודם">→</button>
+        <button type="button" onClick={() => setDate(addDays(date, -1))} aria-label={t('היום הקודם')}>→</button>
         <div className="center">
           <strong>{formatLongDate(date)}</strong>
-          {date === today && <span className="chip">היום</span>}
-          {date === addDays(today, 1) && <span className="chip">מחר</span>}
+          {date === today && <span className="chip">{t('היום')}</span>}
+          {date === addDays(today, 1) && <span className="chip">{t('מחר')}</span>}
         </div>
-        <button type="button" onClick={() => setDate(addDays(date, 1))} aria-label="היום הבא">←</button>
+        <button type="button" onClick={() => setDate(addDays(date, 1))} aria-label={t('היום הבא')}>←</button>
       </div>
       <div className="row">
-        <button type="button" className="small" onClick={() => setDate(today)}>היום</button>
-        <button type="button" className="small" onClick={() => setDate(addDays(today, 1))}>מחר</button>
+        <button type="button" className="small" onClick={() => setDate(today)}>{t('היום')}</button>
+        <button type="button" className="small" onClick={() => setDate(addDays(today, 1))}>{t('מחר')}</button>
       </div>
 
       <NoteComposer date={date} />
 
-      {notes.items.length === 0 && <p className="muted empty">אין הערות לתאריך הזה.</p>}
+      {notes.items.length === 0 && <p className="muted empty">{t('אין הערות לתאריך הזה.')}</p>}
       {[...notes.items]
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
         .map((n) => {
@@ -44,8 +45,8 @@ export default function AdminNotes() {
           return (
             <article key={n.id} className={`card note${n.urgent ? ' urgent' : ''}`}>
               <div className="note-meta">
-                {n.urgent && <span className="chip red">דחוף</span>}
-                <span className="chip">{AREA_LABEL[n.area]}</span>
+                {n.urgent && <span className="chip red">{t('דחוף')}</span>}
+                <span className="chip">{t(AREA_LABEL[n.area])}</span>
                 <span className="muted small-text">
                   {nameOf(n.createdBy)} · {formatTime(n.createdAt)}
                 </span>
@@ -53,19 +54,19 @@ export default function AdminNotes() {
               <p className="note-text">{n.text}</p>
               <div className="note-foot">
                 <span className="muted small-text">
-                  ראו ({seen.length}): {seen.map((a) => nameOf(a.employeeId)).join(', ') || 'אף אחד עדיין'}
+                  {t('ראו (')}{seen.length}): {seen.map((a) => nameOf(a.employeeId)).join(', ') || t('אף אחד עדיין')}
                 </span>
                 <button
                   type="button"
                   className="danger small"
                   onClick={() => {
-                    if (confirm('למחוק את ההערה?')) {
+                    if (confirm(t('למחוק את ההערה?'))) {
                       void notes.remove(n.id);
                       seen.forEach((a) => void acks.remove(a.id));
                     }
                   }}
                 >
-                  מחק
+                  {t('מחק')}
                 </button>
               </div>
             </article>

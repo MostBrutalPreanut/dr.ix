@@ -11,6 +11,7 @@ import { seedChecklists } from '../seed/checklists';
 import { seedSettings, seedTasks } from '../seed/tasks';
 import { NoteComposer } from '../components/NoteComposer';
 import { ReservationsSummary } from '../components/Reservations';
+import { t } from '../lib/i18n';
 
 export default function Today() {
   const { user, isManager, employees } = useAuth();
@@ -89,24 +90,24 @@ export default function Today() {
   return (
     <>
       <section className="hello">
-        <h1>שלום {user.name} 👋</h1>
+        <h1>{t('שלום')}{' '}{user.name} 👋</h1>
         <p className="muted">{formatLongDate(today)}</p>
       </section>
 
       <section>
         <div className="section-head">
-          <h2>📣 הערות למשמרת</h2>
+          <h2>{t('📣 הערות למשמרת')}</h2>
           {isManager && (
             <button type="button" className="small" onClick={() => setComposing((c) => !c)}>
-              {composing ? 'סגור' : '+ הערה'}
+              {composing ? t('סגור') : t('+ הערה')}
             </button>
           )}
         </div>
         {composing && <NoteComposer date={today} onDone={() => setComposing(false)} />}
-        {sortedNotes.length === 0 && !composing && <p className="muted empty">אין הערות להיום.</p>}
+        {sortedNotes.length === 0 && !composing && <p className="muted empty">{t('אין הערות להיום.')}</p>}
         {sortedNotes.filter((n) => hidden.includes(n.id)).length > 0 && (
           <button type="button" className="small" onClick={() => setShowHidden(!showHidden)}>
-            {showHidden ? 'הסתר שוב את המוסתרות' : `הצג ${sortedNotes.filter((n) => hidden.includes(n.id)).length} הערות מוסתרות`}
+            {showHidden ? t('הסתר שוב את המוסתרות') : t('הצג {length} הערות מוסתרות', { length: sortedNotes.filter((n) => hidden.includes(n.id)).length })}
           </button>
         )}
         {sortedNotes.filter((n) => showHidden || !hidden.includes(n.id)).map((n) => {
@@ -116,8 +117,8 @@ export default function Today() {
           return (
             <article key={n.id} className={`card note${n.urgent ? ' urgent' : ''}${iSaw ? ' seen' : ''}`}>
               <div className="note-meta">
-                {n.urgent && <span className="chip red">דחוף</span>}
-                <span className="chip">{AREA_LABEL[n.area]}</span>
+                {n.urgent && <span className="chip red">{t('דחוף')}</span>}
+                <span className="chip">{t(AREA_LABEL[n.area])}</span>
                 <span className="muted small-text">
                   {nameOf(n.createdBy)} · {formatTime(n.createdAt)}
                 </span>
@@ -126,20 +127,20 @@ export default function Today() {
               <div className="note-foot">
                 {iSaw ? (
                   <>
-                    <span className="ok">✓ ראיתי</span>
+                    <span className="ok">{t('✓ ראיתי')}</span>
                     <button type="button" className="small" onClick={() => hideNote(n.id, !hidden.includes(n.id))}>
-                      {hidden.includes(n.id) ? 'בטל הסתרה' : 'הסתר'}
+                      {hidden.includes(n.id) ? t('בטל הסתרה') : t('הסתר')}
                     </button>
                   </>
                 ) : (
                   <button type="button" className="primary small" onClick={() => void ackNote(n)}>
-                    ראיתי ✓
+                    {t('ראיתי ✓')}
                   </button>
                 )}
                 {isManager && (
                   <span className="muted small-text" title={missing.map((m) => m.name).join(', ')}>
-                    ראו {seenBy.length}/{employees.length}
-                    {missing.length > 0 && missing.length <= 4 && ` · טרם: ${missing.map((m) => m.name).join(', ')}`}
+                    {t('ראו')}{' '}{seenBy.length}/{employees.length}
+                    {missing.length > 0 && missing.length <= 4 && t(' · טרם: {p1}', { p1: missing.map((m) => m.name).join(', ') })}
                   </span>
                 )}
               </div>
@@ -151,12 +152,12 @@ export default function Today() {
       <ReservationsSummary date={today} />
 
       <Link to="/tips" className="card summary-line">
-        <span>💰 <strong>טיפים</strong> - הזנת סכום בסוף משמרת</span>
-        <span className="muted">←</span>
+        <span>💰 <strong>{t('טיפים')}</strong>{' '}{t('- הזנת סכום בסוף משמרת')}</span>
+        <span className="muted">{t('←')}</span>
       </Link>
 
       <section>
-        <h2>✅ נהלי פתיחה וסגירה</h2>
+        <h2>{t('✅ נהלי פתיחה וסגירה')}</h2>
         <div className="grid2">
           {[...checklists.items]
             .sort((a, b) => a.order - b.order)
@@ -168,13 +169,13 @@ export default function Today() {
               return (
                 <Link key={c.id} to={`/checklist/${c.id}`} className={`card tile${closed ? ' closed' : ''}`}>
                   <div className="tile-title">
-                    <span className="big-ico">{c.icon}</span> {c.title}
+                    <span className="big-ico">{c.icon}</span> {t(c.title)}
                   </div>
                   <div className="bar">
                     <div style={{ width: `${pct}%` }} />
                   </div>
                   <div className="muted small-text">
-                    {closed ? `✓ נסגר ע"י ${nameOf(closed.by)} · ${formatTime(closed.at)}` : `${done}/${itemIds.size} הושלמו`}
+                    {closed ? t('✓ נסגר ע"י {by} · {at}', { by: nameOf(closed.by), at: formatTime(closed.at) }) : t('{done}/{size} הושלמו', { done, size: itemIds.size })}
                   </div>
                 </Link>
               );
@@ -184,12 +185,12 @@ export default function Today() {
 
       <section>
         <div className="section-head">
-          <h2>🧹 משימות יום {WEEKDAY_NAMES[weekdayOf(today)]}</h2>
+          <h2>{t('🧹 משימות יום {day}', { day: t(WEEKDAY_NAMES[weekdayOf(today)]) })}</h2>
           <span className="muted small-text">
             {doneCount}/{due.length}
           </span>
         </div>
-        {due.length === 0 && <p className="muted empty">אין משימות מיוחדות להיום 🎉</p>}
+        {due.length === 0 && <p className="muted empty">{t('אין משימות מיוחדות להיום 🎉')}</p>}
         {due.map(({ task, dueDate, done, late }) => {
           const comp = completions.items.find((c) => c.id === completionId(task.id, dueDate));
           const key = `${dueDate}|${task.id}`;
@@ -200,16 +201,16 @@ export default function Today() {
                 <button
                   type="button"
                   className={`check${done ? ' on' : ''}`}
-                  aria-label={done ? 'בטל סימון' : 'סמן כבוצע'}
+                  aria-label={done ? t('בטל סימון') : t('סמן כבוצע')}
                   aria-pressed={done}
                   onClick={() => void toggleTask(task.id, dueDate, done)}
                 >
                   {done ? '✓' : ''}
                 </button>
                 <button type="button" className="task-title" onClick={() => setOpenTask(open ? null : key)}>
-                  <span>{task.title}</span>
-                  {late && <span className="chip red">מיום {WEEKDAY_NAMES[weekdayOf(dueDate)]}</span>}
-                  {task.everyNWeeks === 2 && <span className="chip">אחת לשבועיים</span>}
+                  <span>{t(task.title)}</span>
+                  {late && <span className="chip red">{t('מיום {day}', { day: t(WEEKDAY_NAMES[weekdayOf(dueDate)]) })}</span>}
+                  {task.everyNWeeks === 2 && <span className="chip">{t('אחת לשבועיים')}</span>}
                   {comp && (
                     <span className="muted small-text">
                       {nameOf(comp.by)} · {formatTime(comp.at)}
@@ -221,9 +222,9 @@ export default function Today() {
               {open && (
                 <div className="task-detail">
                   {task.description ? (
-                    <p>{task.description}</p>
+                    <p>{t(task.description)}</p>
                   ) : (
-                    <p className="muted">עדיין אין הסבר למשימה הזו.{isManager && ' אפשר להוסיף אחד בניהול ← משימות ניקיון.'}</p>
+                    <p className="muted">{t('עדיין אין הסבר למשימה הזו.')}{isManager && t(' אפשר להוסיף אחד בניהול ← משימות ניקיון.')}</p>
                   )}
                 </div>
               )}

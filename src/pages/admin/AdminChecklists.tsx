@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { newId, useCollection } from '../../lib/db';
 import type { Checklist, ChecklistGroup } from '../../lib/types';
 import { seedChecklists } from '../../seed/checklists';
+import { t } from '../../lib/i18n';
 
 function move<T>(arr: T[], i: number, dir: -1 | 1): T[] {
   const j = i + dir;
@@ -27,7 +28,7 @@ export default function AdminChecklists() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id, loading]);
 
-  if (loading || !draft) return <p className="muted">טוען…</p>;
+  if (loading || !draft) return <p className="muted">{t('טוען…')}</p>;
 
   const patchGroup = (gi: number, fn: (g: ChecklistGroup) => ChecklistGroup) => {
     setSaved(false);
@@ -36,13 +37,13 @@ export default function AdminChecklists() {
 
   return (
     <>
-      <Link to="/admin" className="back">← ניהול</Link>
-      <h1>✅ נהלי פתיחה וסגירה</h1>
+      <Link to="/admin" className="back">{t('← ניהול')}</Link>
+      <h1>{t('✅ נהלי פתיחה וסגירה')}</h1>
 
       <div className="chips">
         {sorted.map((c) => (
           <button key={c.id} type="button" className={`chip pick${c.id === selected?.id ? ' on' : ''}`} onClick={() => setSelectedId(c.id)}>
-            {c.icon} {c.title}
+            {c.icon} {t(c.title)}
           </button>
         ))}
         <button
@@ -50,22 +51,22 @@ export default function AdminChecklists() {
           className="chip pick"
           onClick={async () => {
             const id = newId();
-            await save({ id, title: 'רשימה חדשה', icon: '📝', order: sorted.length + 1, groups: [] });
+            await save({ id, title: t('רשימה חדשה'), icon: '📝', order: sorted.length + 1, groups: [] });
             setSelectedId(id);
           }}
         >
-          + רשימה חדשה
+          {t('+ רשימה חדשה')}
         </button>
       </div>
 
       <div className="card form">
         <div className="row">
           <label className="inline" style={{ flex: '0 0 5rem' }}>
-            אייקון
+            {t('אייקון')}
             <input value={draft.icon} maxLength={4} onChange={(e) => { setSaved(false); setDraft({ ...draft, icon: e.target.value }); }} />
           </label>
           <label style={{ flex: 1 }}>
-            שם הרשימה
+            {t('שם הרשימה')}
             <input value={draft.title} onChange={(e) => { setSaved(false); setDraft({ ...draft, title: e.target.value }); }} />
           </label>
         </div>
@@ -75,24 +76,24 @@ export default function AdminChecklists() {
         <section key={g.id} className="card form group-edit">
           <div className="row">
             <input
-              aria-label="שם הקבוצה"
+              aria-label={t('שם הקבוצה')}
               style={{ flex: 1, fontWeight: 700 }}
               value={g.title}
               onChange={(e) => patchGroup(gi, (x) => ({ ...x, title: e.target.value }))}
             />
-            <button type="button" className="small" aria-label="הזז קבוצה למעלה" onClick={() => { setSaved(false); setDraft({ ...draft, groups: move(draft.groups, gi, -1) }); }}>▲</button>
-            <button type="button" className="small" aria-label="הזז קבוצה למטה" onClick={() => { setSaved(false); setDraft({ ...draft, groups: move(draft.groups, gi, 1) }); }}>▼</button>
+            <button type="button" className="small" aria-label={t('הזז קבוצה למעלה')} onClick={() => { setSaved(false); setDraft({ ...draft, groups: move(draft.groups, gi, -1) }); }}>▲</button>
+            <button type="button" className="small" aria-label={t('הזז קבוצה למטה')} onClick={() => { setSaved(false); setDraft({ ...draft, groups: move(draft.groups, gi, 1) }); }}>▼</button>
             <button
               type="button"
               className="small danger"
               onClick={() => {
-                if (confirm(`למחוק את הקבוצה "${g.title}" עם כל הסעיפים שלה?`)) {
+                if (confirm(t('למחוק את הקבוצה "{title}" עם כל הסעיפים שלה?', { title: g.title }))) {
                   setSaved(false);
                   setDraft({ ...draft, groups: draft.groups.filter((_, i) => i !== gi) });
                 }
               }}
             >
-              מחק
+              {t('מחק')}
             </button>
           </div>
           {g.items.map((it, ii) => (
@@ -101,18 +102,18 @@ export default function AdminChecklists() {
                 <textarea
                   rows={2}
                   style={{ flex: 1 }}
-                  aria-label="טקסט הסעיף"
+                  aria-label={t('טקסט הסעיף')}
                   value={it.text}
                   onChange={(e) => patchGroup(gi, (x) => ({ ...x, items: x.items.map((y, k) => (k === ii ? { ...y, text: e.target.value } : y)) }))}
                 />
                 <div className="col">
-                  <button type="button" className="small" aria-label="הזז למעלה" onClick={() => patchGroup(gi, (x) => ({ ...x, items: move(x.items, ii, -1) }))}>▲</button>
-                  <button type="button" className="small" aria-label="הזז למטה" onClick={() => patchGroup(gi, (x) => ({ ...x, items: move(x.items, ii, 1) }))}>▼</button>
-                  <button type="button" className="small danger" aria-label="מחק סעיף" onClick={() => patchGroup(gi, (x) => ({ ...x, items: x.items.filter((_, k) => k !== ii) }))}>✕</button>
+                  <button type="button" className="small" aria-label={t('הזז למעלה')} onClick={() => patchGroup(gi, (x) => ({ ...x, items: move(x.items, ii, -1) }))}>▲</button>
+                  <button type="button" className="small" aria-label={t('הזז למטה')} onClick={() => patchGroup(gi, (x) => ({ ...x, items: move(x.items, ii, 1) }))}>▼</button>
+                  <button type="button" className="small danger" aria-label={t('מחק סעיף')} onClick={() => patchGroup(gi, (x) => ({ ...x, items: x.items.filter((_, k) => k !== ii) }))}>✕</button>
                 </div>
               </div>
               <input
-                placeholder="הערה / דגש (אופציונלי)"
+                placeholder={t('הערה / דגש (אופציונלי)')}
                 value={it.detail ?? ''}
                 onChange={(e) => patchGroup(gi, (x) => ({ ...x, items: x.items.map((y, k) => (k === ii ? { ...y, detail: e.target.value || undefined } : y)) }))}
               />
@@ -123,16 +124,16 @@ export default function AdminChecklists() {
             className="small"
             onClick={() => patchGroup(gi, (x) => ({ ...x, items: [...x.items, { id: `${x.id}-${newId().slice(0, 6)}`, text: '' }] }))}
           >
-            + סעיף
+            {t('+ סעיף')}
           </button>
         </section>
       ))}
 
       <button
         type="button"
-        onClick={() => { setSaved(false); setDraft({ ...draft, groups: [...draft.groups, { id: `g-${newId().slice(0, 6)}`, title: 'קבוצה חדשה', items: [] }] }); }}
+        onClick={() => { setSaved(false); setDraft({ ...draft, groups: [...draft.groups, { id: `g-${newId().slice(0, 6)}`, title: t('קבוצה חדשה'), items: [] }] }); }}
       >
-        + קבוצה חדשה
+        {t('+ קבוצה חדשה')}
       </button>
 
       <div className="sticky-save">
@@ -149,7 +150,7 @@ export default function AdminChecklists() {
             setSaved(true);
           }}
         >
-          {saved ? '✓ נשמר' : 'שמור שינויים'}
+          {saved ? t('✓ נשמר') : t('שמור שינויים')}
         </button>
       </div>
     </>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { PinPad } from './Login';
+import { t } from '../lib/i18n';
 
 /** Asks for a personal PIN on the first login (can be skipped). */
 export default function FirstLogin() {
@@ -10,7 +11,7 @@ export default function FirstLogin() {
 
   async function submit(pin: string) {
     if (pin === '0000') {
-      setError('בחרו קוד אחר מ-0000');
+      setError(t('בחרו קוד אחר מ-0000'));
       return;
     }
     if (first === null) {
@@ -19,24 +20,24 @@ export default function FirstLogin() {
     } else if (first === pin) {
       if (!(await changePin(pin))) {
         setFirst(null);
-        setError('הקוד לא התקבל, נסו קוד אחר');
+        setError(t('הקוד לא התקבל, נסו קוד אחר'));
       }
     } else {
       setFirst(null);
-      setError('הקודים לא תאמו, נסו שוב מההתחלה');
+      setError(t('הקודים לא תאמו, נסו שוב מההתחלה'));
     }
   }
 
   return (
     <div className="login">
-      <h1>היי {user?.name} 👋</h1>
+      <h1>{t('היי')}{' '}{user?.name} 👋</h1>
       <p className="muted">
-        {first === null ? 'בחרו קוד אישי בן 4 ספרות' : 'הזינו שוב לאישור'}
+        {first === null ? t('בחרו קוד אישי בן 4 ספרות') : t('הזינו שוב לאישור')}
       </p>
       <PinPad onSubmit={(p) => void submit(p)} />
       <p className="error" role="alert">{error}</p>
       <button type="button" className="link" onClick={() => void skipPinChange()}>
-        אולי אחר כך (הקוד נשאר 0000)
+        {t('אולי אחר כך (הקוד נשאר 0000)')}
       </button>
     </div>
   );

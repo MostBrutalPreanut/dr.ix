@@ -6,8 +6,9 @@ import { useBusinessDate } from '../lib/useBusinessDate';
 import { dayTips, fullShiftHours, monthDays, totalsByPerson } from '../lib/tips';
 import type { DayTips } from '../lib/tips';
 import type { TipEntry, TipWorkerDoc } from '../lib/types';
+import { getLang, t } from '../lib/i18n';
 
-const money = (n: number) => `₪${n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+const money = (n: number) => `₪${n.toLocaleString(getLang() === 'en' ? 'en-GB' : 'he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 function shiftMonth(month: string, by: number): string {
   const [y, m] = month.split('-').map(Number);
@@ -16,7 +17,7 @@ function shiftMonth(month: string, by: number): string {
 }
 
 const monthLabel = (month: string) =>
-  new Intl.DateTimeFormat('he-IL', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${month}-15T12:00:00Z`));
+  new Intl.DateTimeFormat(getLang() === 'en' ? 'en-GB' : 'he-IL', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${month}-15T12:00:00Z`));
 
 const shortDate = (d: string) => `${d.slice(8)}/${d.slice(5, 7)}`;
 
@@ -35,11 +36,11 @@ export default function TipsPage() {
 function DayNav({ date, today, back, onChange }: { date: string; today: string; back: number; onChange(d: string): void }) {
   return (
     <div className="row between">
-      <button type="button" className="small" disabled={date <= addDays(today, -back)} onClick={() => onChange(addDays(date, -1))} aria-label="היום הקודם">→</button>
+      <button type="button" className="small" disabled={date <= addDays(today, -back)} onClick={() => onChange(addDays(date, -1))} aria-label={t('היום הקודם')}>{t('→')}</button>
       <strong>
-        יום {WEEKDAY_NAMES[weekdayOf(date)]} · {formatLongDate(date)}
+        {t('יום {day}', { day: t(WEEKDAY_NAMES[weekdayOf(date)]) })} · {formatLongDate(date)}
       </strong>
-      <button type="button" className="small" disabled={date >= today} onClick={() => onChange(addDays(date, 1))} aria-label="היום הבא">←</button>
+      <button type="button" className="small" disabled={date >= today} onClick={() => onChange(addDays(date, 1))} aria-label={t('היום הבא')}>{t('←')}</button>
     </div>
   );
 }
@@ -66,13 +67,13 @@ function AmountForm({ onAdd }: { onAdd(amount: number): Promise<void> }) {
         inputMode="decimal"
         min={0}
         step="0.01"
-        placeholder="סכום הטיפים"
-        aria-label="סכום טיפים"
+        placeholder={t('סכום הטיפים')}
+        aria-label={t('סכום טיפים')}
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
       />
       <button type="submit" className="primary" disabled={!(n > 0) || busy}>
-        הוסף
+        {t('הוסף')}
       </button>
     </form>
   );
@@ -92,7 +93,7 @@ function WorkersPicker({ date, hint }: { date: string; hint: string }) {
       await action();
       setError('');
     } catch {
-      setError('השמירה נכשלה - בדקו חיבור ונסו שוב');
+      setError(t('השמירה נכשלה - בדקו חיבור ונסו שוב'));
     }
   }
   const toggle = (id: string) =>
@@ -112,8 +113,8 @@ function WorkersPicker({ date, hint }: { date: string; hint: string }) {
 
   return (
     <section className="card form">
-      <h2>מי עבד ({workers.items.length})</h2>
-      <p className="muted small-text">{hint} מתגבר/ת: מסמנים ורושמים כמה שעות עבד/ה (משמרת מלאה היא {fullShift} שעות).</p>
+      <h2>{t('מי עבד (')}{workers.items.length})</h2>
+      <p className="muted small-text">{hint}{' '}{t('מתגבר/ת: מסמנים ורושמים כמה שעות עבד/ה (משמרת מלאה היא')}{' '}{fullShift}{' '}{t('שעות).')}</p>
       {error && <p className="banner-warn" role="alert">{error}</p>}
       <div className="chips">
         {[...employees]
@@ -134,11 +135,11 @@ function WorkersPicker({ date, hint }: { date: string; hint: string }) {
           </span>
           <label className="inline check">
             <input type="checkbox" checked={Boolean(w.reinforcement)} onChange={(e) => void patch(w, { reinforcement: e.target.checked, hours: e.target.checked ? (w.hours ?? 4) : undefined })} />
-            <span>מתגבר/ת</span>
+            <span>{t('מתגבר/ת')}</span>
           </label>
           {w.reinforcement && (
             <label className="inline">
-              <span>שעות</span>
+              <span>{t('שעות')}</span>
               <input
                 className="age"
                 type="number"
@@ -175,7 +176,7 @@ function StaffTips() {
       setAdded((a) => [...a, { id, amount, date, at }]);
       setError('');
     } catch {
-      setError('השמירה נכשלה - בדקו חיבור ונסו שוב');
+      setError(t('השמירה נכשלה - בדקו חיבור ונסו שוב'));
     }
   }
   async function undo(id: string) {
@@ -183,36 +184,36 @@ function StaffTips() {
       await backend.remove('tipEntries', id);
       setAdded((a) => a.filter((x) => x.id !== id));
     } catch {
-      setError('הביטול נכשל - פנו למנהל');
+      setError(t('הביטול נכשל - פנו למנהל'));
     }
   }
 
   return (
     <>
-      <h1>💰 טיפים</h1>
-      <p className="muted">בסוף המשמרת מזינים את סכום הטיפים ומסמנים מי עבד. החישוב וההפרשה אצל ההנהלה.</p>
+      <h1>{t('💰 טיפים')}</h1>
+      <p className="muted">{t('בסוף המשמרת מזינים את סכום הטיפים ומסמנים מי עבד. החישוב וההפרשה אצל ההנהלה.')}</p>
       {error && <p className="banner-warn" role="alert">{error}</p>}
       <DayNav date={date} today={today} back={1} onChange={setDate} />
 
       <section className="card form">
-        <h2>הוספת סכום</h2>
+        <h2>{t('הוספת סכום')}</h2>
         <AmountForm onAdd={add} />
         {added.map((a) => (
           <div key={a.id} className="li emp">
             <span className="li-body">
-              <strong>✓ נוסף {money(a.amount)}</strong>
+              <strong>{t('✓ נוסף')}{' '}{money(a.amount)}</strong>
               <span className="muted small-text">
                 {shortDate(a.date)} · {formatTime(a.at)}
               </span>
             </span>
             <button type="button" className="small danger" onClick={() => void undo(a.id)}>
-              בטל
+              {t('בטל')}
             </button>
           </div>
         ))}
       </section>
 
-      <WorkersPicker date={date} hint="מסמנים את כל מי שעבד באותו יום." />
+      <WorkersPicker date={date} hint={t('מסמנים את כל מי שעבד באותו יום.')} />
     </>
   );
 }
@@ -221,11 +222,11 @@ function StaffTips() {
 
 function csvOf(days: DayTips[], nameOf: (id: string) => string): string {
   const q = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-  const rows = [['תאריך', 'יום', 'סה"כ טיפים ליום', 'עובד/ת', 'מתגבר/ת', 'שעות', 'חלק'].map(q).join(',')];
+  const rows = [[t('תאריך'), t('יום'), t('סה"כ טיפים ליום'), t('עובד/ת'), t('מתגבר/ת'), t('שעות'), t('חלק')].map(q).join(',')];
   for (const d of [...days].reverse()) {
-    if (d.workers.length === 0) rows.push([d.date, WEEKDAY_NAMES[weekdayOf(d.date)], d.total, '(אין עובדים מסומנים)', '', '', ''].map(q).join(','));
+    if (d.workers.length === 0) rows.push([d.date, t(WEEKDAY_NAMES[weekdayOf(d.date)]), d.total, t('(אין עובדים מסומנים)'), '', '', ''].map(q).join(','));
     for (const w of d.workers)
-      rows.push([d.date, WEEKDAY_NAMES[weekdayOf(d.date)], d.total, nameOf(w.id), w.reinforcement ? 'כן' : '', w.reinforcement ? (w.hours ?? '') : '', d.shares[w.id] ?? 0].map(q).join(','));
+      rows.push([d.date, t(WEEKDAY_NAMES[weekdayOf(d.date)]), d.total, nameOf(w.id), w.reinforcement ? t('כן') : '', w.reinforcement ? (w.hours ?? '') : '', d.shares[w.id] ?? 0].map(q).join(','));
   }
   return rows.join('\r\n');
 }
@@ -254,7 +255,7 @@ function ManagerTips() {
       await action();
       setError('');
     } catch {
-      setError('השמירה נכשלה - בדקו חיבור ונסו שוב');
+      setError(t('השמירה נכשלה - בדקו חיבור ונסו שוב'));
     }
   }
 
@@ -269,18 +270,18 @@ function ManagerTips() {
 
   function summaryText(): string {
     const lines = Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([id, v]) => `${nameOf(id)}: ${v}`);
-    return [`טיפים ${monthLabel(month)}`, ...lines, `סה"כ: ${monthTotal}`].join('\n');
+    return [t('טיפים {month}', { month: monthLabel(month) }), ...lines, t('סה"כ: {monthTotal}', { monthTotal })].join('\n');
   }
 
   return (
     <>
-      <h1>💰 טיפים</h1>
+      <h1>{t('💰 טיפים')}</h1>
       {error && <p className="banner-warn" role="alert">{error}</p>}
       <DayNav date={date} today={today} back={400} onChange={setDate} />
 
       <section className="card form">
         <h2>
-          היום שנבחר: {money(day.total)}
+          {t('היום שנבחר:')}{' '}{money(day.total)}
         </h2>
         <AmountForm
           onAdd={(amount) => guard(() => dayEntries.save({ id: `${date}|${newId()}`, date, amount, by: user!.id, at: new Date().toISOString() }))}
@@ -300,30 +301,30 @@ function ManagerTips() {
                 type="button"
                 className="small danger"
                 onClick={() => {
-                  if (confirm(`למחוק את הסכום ${money(e.amount)}?`)) void guard(() => dayEntries.remove(e.id));
+                  if (confirm(t('למחוק את הסכום {amount}?', { amount: money(e.amount) }))) void guard(() => dayEntries.remove(e.id));
                 }}
               >
-                מחק
+                {t('מחק')}
               </button>
             </div>
           ))}
         {day.workers.length > 0 && day.total > 0 && (
           <p className="muted small-text">
-            חלוקה: {day.workers.map((w) => `${nameOf(w.id)} ${money(day.shares[w.id])}`).join(' · ')}
+            {t('חלוקה:')}{' '}{day.workers.map((w) => `${nameOf(w.id)} ${money(day.shares[w.id])}`).join(' · ')}
           </p>
         )}
       </section>
 
-      <WorkersPicker date={date} hint="כל מי שמסומן מקבל חלק שווה." />
+      <WorkersPicker date={date} hint={t('כל מי שמסומן מקבל חלק שווה.')} />
 
       <section>
         <div className="row between">
-          <button type="button" className="small" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="חודש קודם">→</button>
+          <button type="button" className="small" onClick={() => setMonth(shiftMonth(month, -1))} aria-label={t('חודש קודם')}>{t('→')}</button>
           <h2>{monthLabel(month)}</h2>
-          <button type="button" className="small" disabled={month >= today.slice(0, 7)} onClick={() => setMonth(shiftMonth(month, 1))} aria-label="חודש הבא">←</button>
+          <button type="button" className="small" disabled={month >= today.slice(0, 7)} onClick={() => setMonth(shiftMonth(month, 1))} aria-label={t('חודש הבא')}>{t('←')}</button>
         </div>
 
-        <h3 className="cat">סיכום לפי עובד</h3>
+        <h3 className="cat">{t('סיכום לפי עובד')}</h3>
         <div className="card list">
           {Object.entries(totals)
             .sort((a, b) => b[1] - a[1])
@@ -331,50 +332,50 @@ function ManagerTips() {
               <div key={id} className="li emp">
                 <span className="li-body">
                   <strong>{nameOf(id)}</strong>
-                  <span className="muted small-text">{days.filter((d) => d.shares[id] !== undefined).length} ימי עבודה</span>
+                  <span className="muted small-text">{days.filter((d) => d.shares[id] !== undefined).length}{' '}{t('ימי עבודה')}</span>
                 </span>
                 <strong>{money(v)}</strong>
               </div>
             ))}
-          {Object.keys(totals).length === 0 && <p className="muted empty">אין נתונים לחודש הזה.</p>}
+          {Object.keys(totals).length === 0 && <p className="muted empty">{t('אין נתונים לחודש הזה.')}</p>}
         </div>
         <p>
-          <strong>סה״כ טיפים בחודש: {money(monthTotal)}</strong>
+          <strong>{t('סה״כ טיפים בחודש:')}{' '}{money(monthTotal)}</strong>
         </p>
         {undivided.length > 0 && (
           <p className="banner-warn">
-            ימים עם טיפים אבל בלי עובדים מסומנים (לא חולקו): {undivided.map((d) => shortDate(d.date)).join(', ')}
+            {t('ימים עם טיפים אבל בלי עובדים מסומנים (לא חולקו):')}{' '}{undivided.map((d) => shortDate(d.date)).join(', ')}
           </p>
         )}
         <div className="row">
           <button type="button" className="primary" disabled={days.length === 0} onClick={download}>
-            הורד פירוט לאקסל
+            {t('הורד פירוט לאקסל')}
           </button>
-          <button type="button" disabled={days.length === 0} onClick={() => void navigator.clipboard?.writeText(summaryText()).catch(() => window.prompt('העתיקו:', summaryText()))}>
-            העתק סיכום
+          <button type="button" disabled={days.length === 0} onClick={() => void navigator.clipboard?.writeText(summaryText()).catch(() => window.prompt(t('העתיקו:'), summaryText()))}>
+            {t('העתק סיכום')}
           </button>
         </div>
 
-        <h3 className="cat">פירוט לפי יום</h3>
+        <h3 className="cat">{t('פירוט לפי יום')}</h3>
         {days.map((d) => (
           <article key={d.date} className="card">
             <div className="row between">
               <strong>
-                {shortDate(d.date)} · יום {WEEKDAY_NAMES[weekdayOf(d.date)]}
+                {shortDate(d.date)} · {t('יום {day}', { day: t(WEEKDAY_NAMES[weekdayOf(d.date)]) })}
               </strong>
               <strong>{money(d.total)}</strong>
             </div>
             {d.workers.length === 0 ? (
-              <span className="muted small-text">אין עובדים מסומנים</span>
+              <span className="muted small-text">{t('אין עובדים מסומנים')}</span>
             ) : (
               <span className="muted small-text block">
                 {d.workers
-                  .map((w) => `${nameOf(w.id)}${w.reinforcement ? ` (מתגבר ${w.hours ?? '?'} ש׳)` : ''} ${money(d.shares[w.id] ?? 0)}`)
+                  .map((w) => `${nameOf(w.id)}${w.reinforcement ? t(' (מתגבר {p1} ש׳)', { p1: w.hours ?? '?' }) : ''} ${money(d.shares[w.id] ?? 0)}`)
                   .join(' · ')}
               </span>
             )}
             <button type="button" className="small" onClick={() => setDate(d.date)}>
-              פתח את היום
+              {t('פתח את היום')}
             </button>
           </article>
         ))}

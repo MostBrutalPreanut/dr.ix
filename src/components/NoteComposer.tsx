@@ -3,6 +3,7 @@ import { newId, useCollection } from '../lib/db';
 import { useAuth } from '../lib/auth';
 import { AREA_LABEL } from '../lib/types';
 import type { Area, Note } from '../lib/types';
+import { t } from '../lib/i18n';
 
 /** Manager form: write a note for the crew of a given business day. */
 export function NoteComposer({ date, onDone }: { date: string; onDone?: () => void }) {
@@ -38,21 +39,21 @@ export function NoteComposer({ date, onDone }: { date: string; onDone?: () => vo
   return (
     <form className="card form composer" onSubmit={(e) => void submit(e)}>
       <label>
-        הערה למשמרת
+        {t('הערה למשמרת')}
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={3}
-          placeholder="למשל: לחבר שולחנות 4 ו-5 לשעה 19:00, לסדר את החדר הפרטי, להכין תוספות פיצה אקסטרה…"
+          placeholder={t('למשל: לחבר שולחנות 4 ו-5 לשעה 19:00, לסדר את החדר הפרטי, להכין תוספות פיצה אקסטרה…')}
         />
       </label>
       <div className="field-row">
         <label className="inline">
-          למי?
+          {t('למי?')}
           <select value={area} onChange={(e) => setArea(e.target.value as Area)}>
             {(Object.keys(AREA_LABEL) as Area[]).map((a) => (
               <option key={a} value={a}>
-                {AREA_LABEL[a]}
+                {t(AREA_LABEL[a])}
               </option>
             ))}
           </select>
@@ -63,11 +64,11 @@ export function NoteComposer({ date, onDone }: { date: string; onDone?: () => vo
           aria-pressed={urgent}
           onClick={() => setUrgent((u) => !u)}
         >
-          🚨 דחוף
+          {t('🚨 דחוף')}
         </button>
       </div>
       <button type="submit" className="primary" disabled={busy || !text.trim()}>
-        פרסם
+        {t('פרסם')}
       </button>
     </form>
   );

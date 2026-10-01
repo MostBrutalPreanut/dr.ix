@@ -5,6 +5,7 @@ import { recommend } from '../lib/games';
 import { DIFFICULTY_LABEL, STYLE_LABEL } from '../lib/types';
 import type { Difficulty, Game, GameStyle } from '../lib/types';
 import { seedGames } from '../seed/games';
+import { t } from '../lib/i18n';
 
 const STYLES = Object.keys(STYLE_LABEL) as GameStyle[];
 const DIFFICULTIES = Object.keys(DIFFICULTY_LABEL) as Difficulty[];
@@ -20,11 +21,11 @@ function GameCard({ game, onEdit }: { game: Game; onEdit?: () => void }) {
     <article className="card game">
       <div className="game-head">
         <h3>
-          {game.featured && <span title="חובה להכיר">⭐ </span>}
+          {game.featured && <span title={t('חובה להכיר')}>⭐ </span>}
           {game.name}
         </h3>
         {onEdit && (
-          <button type="button" className="small" onClick={onEdit} aria-label={`עריכת ${game.name}`}>
+          <button type="button" className="small" onClick={onEdit} aria-label={t('עריכת {name}', { name: game.name })}>
             ✏️
           </button>
         )}
@@ -33,19 +34,19 @@ function GameCard({ game, onEdit }: { game: Game; onEdit?: () => void }) {
         <span className="chip">
           👥 {game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}-${game.maxPlayers}`}
         </span>
-        <span className="chip">{game.minAge !== undefined ? `גיל ${game.minAge}+` : 'גיל: לא הוגדר'}</span>
+        <span className="chip">{game.minAge !== undefined ? t('גיל {minAge}+', { minAge: game.minAge }) : t('גיל: לא הוגדר')}</span>
         <span className="chip">
-          {DIFF_DOT[game.difficulty]} {DIFFICULTY_LABEL[game.difficulty]}
+          {DIFF_DOT[game.difficulty]} {t(DIFFICULTY_LABEL[game.difficulty])}
         </span>
         {game.styles.map((s) => (
           <span key={s} className="chip soft">
-            {STYLE_LABEL[s]}
+            {t(STYLE_LABEL[s])}
           </span>
         ))}
-        {game.durationMin !== undefined && <span className="chip">⏱ {game.durationMin} דק'</span>}
-        {game.shelf && <span className="chip red">📍 מדף {game.shelf}</span>}
+        {game.durationMin !== undefined && <span className="chip">⏱ {game.durationMin}{' '}{t("דק'")}</span>}
+        {game.shelf && <span className="chip red">{t('📍 מדף')}{' '}{game.shelf}</span>}
       </div>
-      {game.notes && <p className="muted small-text">{game.notes}</p>}
+      {game.notes && <p className="muted small-text">{t(game.notes)}</p>}
     </article>
   );
 }
@@ -85,7 +86,7 @@ export default function Games() {
           setEditing(null);
         }}
         onDelete={async () => {
-          if (confirm(`למחוק את "${editing.name}"?`)) {
+          if (confirm(t('למחוק את "{name}"?', { name: editing.name }))) {
             await remove(editing.id);
             setEditing(null);
           }
@@ -99,42 +100,42 @@ export default function Games() {
   return (
     <>
       <div className="section-head">
-        <h1>🎲 משחקים</h1>
+        <h1>{t('🎲 משחקים')}</h1>
         {isManager && (
           <button
             type="button"
             className="small"
             onClick={() => setEditing({ id: newId(), name: '', minPlayers: 2, maxPlayers: 4, styles: [], difficulty: 'easy' })}
           >
-            + משחק חדש
+            {t('+ משחק חדש')}
           </button>
         )}
       </div>
 
       <div className="seg" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'recommend'} className={tab === 'recommend' ? 'on' : ''} onClick={() => setTab('recommend')}>
-          המלצה מהירה
+          {t('המלצה מהירה')}
         </button>
         <button type="button" role="tab" aria-selected={tab === 'all'} className={tab === 'all' ? 'on' : ''} onClick={() => setTab('all')}>
-          כל המשחקים ({items.length})
+          {t('כל המשחקים (')}{items.length})
         </button>
       </div>
 
-      {loading && <p className="muted">טוען…</p>}
+      {loading && <p className="muted">{t('טוען…')}</p>}
 
       {tab === 'recommend' ? (
         <>
           <div className="card form">
             <div className="row between">
-              <span>כמה אורחים?</span>
+              <span>{t('כמה אורחים?')}</span>
               <div className="stepper">
-                <button type="button" aria-label="פחות" onClick={() => { setPlayers((p) => Math.max(1, p - 1)); setShown(PAGE); }}>−</button>
+                <button type="button" aria-label={t('פחות')} onClick={() => { setPlayers((p) => Math.max(1, p - 1)); setShown(PAGE); }}>−</button>
                 <output aria-live="polite">{players}</output>
-                <button type="button" aria-label="יותר" onClick={() => { setPlayers((p) => Math.min(30, p + 1)); setShown(PAGE); }}>+</button>
+                <button type="button" aria-label={t('יותר')} onClick={() => { setPlayers((p) => Math.min(30, p + 1)); setShown(PAGE); }}>+</button>
               </div>
             </div>
             <label className="row between">
-              <span>הגיל של הצעיר ביותר</span>
+              <span>{t('הגיל של הצעיר ביותר')}</span>
               <input
                 className="age"
                 type="number"
@@ -142,26 +143,26 @@ export default function Games() {
                 min={1}
                 max={99}
                 value={age}
-                placeholder="לא משנה"
+                placeholder={t('לא משנה')}
                 onChange={(e) => { setAge(e.target.value); setShown(PAGE); }}
               />
             </label>
             <div>
-              <span className="label">סגנון</span>
+              <span className="label">{t('סגנון')}</span>
               <div className="chips">
                 {STYLES.map((s) => (
                   <button key={s} type="button" className={`chip pick${styles.includes(s) ? ' on' : ''}`} aria-pressed={styles.includes(s)} onClick={() => { setStyles(toggle(styles, s)); setShown(PAGE); }}>
-                    {STYLE_LABEL[s]}
+                    {t(STYLE_LABEL[s])}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <span className="label">רמת קושי</span>
+              <span className="label">{t('רמת קושי')}</span>
               <div className="chips">
                 {DIFFICULTIES.map((d) => (
                   <button key={d} type="button" className={`chip pick${difficulties.includes(d) ? ' on' : ''}`} aria-pressed={difficulties.includes(d)} onClick={() => { setDifficulties(toggle(difficulties, d)); setShown(PAGE); }}>
-                    {DIFF_DOT[d]} {DIFFICULTY_LABEL[d]}
+                    {DIFF_DOT[d]} {t(DIFFICULTY_LABEL[d])}
                   </button>
                 ))}
               </div>
@@ -169,20 +170,20 @@ export default function Games() {
           </div>
 
           <p className="muted small-text">
-            {matches.length === 0 ? 'אין משחק שמתאים לבחירה. נסו להסיר סינון.' : `${matches.length} משחקים מתאימים. הנה המומלצים:`}
+            {matches.length === 0 ? t('אין משחק שמתאים לבחירה. נסו להסיר סינון.') : t('{length} משחקים מתאימים. הנה המומלצים:', { length: matches.length })}
           </p>
           {matches.slice(0, shown).map((g) => (
             <GameCard key={g.id} game={g} onEdit={edit?.(g)} />
           ))}
           {matches.length > shown && (
             <button type="button" className="wide" onClick={() => setShown((n) => n + PAGE)}>
-              עוד המלצות
+              {t('עוד המלצות')}
             </button>
           )}
         </>
       ) : (
         <>
-          <input className="search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="חיפוש משחק או מספר מדף" aria-label="חיפוש משחק" />
+          <input className="search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('חיפוש משחק או מספר מדף')} aria-label={t('חיפוש משחק')} />
           {all.map((g) => (
             <GameCard key={g.id} game={g} onEdit={edit?.(g)} />
           ))}
@@ -225,73 +226,73 @@ function GameEditor({
         void onSave(clean);
       }}
     >
-      <h1>{isNew ? 'משחק חדש' : 'עריכת משחק'}</h1>
+      <h1>{isNew ? t('משחק חדש') : t('עריכת משחק')}</h1>
       <label>
-        שם המשחק
+        {t('שם המשחק')}
         <input value={g.name} onChange={(e) => setG({ ...g, name: e.target.value })} required />
       </label>
       <div className="row">
         <label style={{ flex: 1 }}>
-          שחקנים (מינימום)
+          {t('שחקנים (מינימום)')}
           <input type="number" inputMode="numeric" min={1} value={g.minPlayers} onChange={(e) => setG({ ...g, minPlayers: Number(e.target.value) })} />
         </label>
         <label style={{ flex: 1 }}>
-          שחקנים (מקסימום)
+          {t('שחקנים (מקסימום)')}
           <input type="number" inputMode="numeric" min={1} value={g.maxPlayers} onChange={(e) => setG({ ...g, maxPlayers: Number(e.target.value) })} />
         </label>
       </div>
       <div className="row">
         <label style={{ flex: 1 }}>
-          גיל מינימלי / מומלץ
-          <input type="number" inputMode="numeric" min={1} max={99} value={g.minAge ?? ''} placeholder="ריק = לא ידוע" onChange={(e) => setG({ ...g, minAge: num(e.target.value) })} />
+          {t('גיל מינימלי / מומלץ')}
+          <input type="number" inputMode="numeric" min={1} max={99} value={g.minAge ?? ''} placeholder={t('ריק = לא ידוע')} onChange={(e) => setG({ ...g, minAge: num(e.target.value) })} />
         </label>
         <label style={{ flex: 1 }}>
-          משך (דקות)
-          <input type="number" inputMode="numeric" min={1} value={g.durationMin ?? ''} placeholder="אופציונלי" onChange={(e) => setG({ ...g, durationMin: num(e.target.value) })} />
+          {t('משך (דקות)')}
+          <input type="number" inputMode="numeric" min={1} value={g.durationMin ?? ''} placeholder={t('אופציונלי')} onChange={(e) => setG({ ...g, durationMin: num(e.target.value) })} />
         </label>
       </div>
       <label>
-        מספר מדף
-        <input value={g.shelf ?? ''} onChange={(e) => setG({ ...g, shelf: e.target.value })} placeholder="אפשר להשאיר ריק ולמלא אחר כך" />
+        {t('מספר מדף')}
+        <input value={g.shelf ?? ''} onChange={(e) => setG({ ...g, shelf: e.target.value })} placeholder={t('אפשר להשאיר ריק ולמלא אחר כך')} />
       </label>
       <div>
-        <span className="label">סגנון</span>
+        <span className="label">{t('סגנון')}</span>
         <div className="chips">
           {STYLES.map((s) => (
             <button key={s} type="button" className={`chip pick${g.styles.includes(s) ? ' on' : ''}`} aria-pressed={g.styles.includes(s)} onClick={() => setG({ ...g, styles: toggle(g.styles, s) })}>
-              {STYLE_LABEL[s]}
+              {t(STYLE_LABEL[s])}
             </button>
           ))}
         </div>
       </div>
       <div>
-        <span className="label">רמת קושי</span>
+        <span className="label">{t('רמת קושי')}</span>
         <div className="chips">
           {DIFFICULTIES.map((d) => (
             <button key={d} type="button" className={`chip pick${g.difficulty === d ? ' on' : ''}`} aria-pressed={g.difficulty === d} onClick={() => setG({ ...g, difficulty: d })}>
-              {DIFF_DOT[d]} {DIFFICULTY_LABEL[d]}
+              {DIFF_DOT[d]} {t(DIFFICULTY_LABEL[d])}
             </button>
           ))}
         </div>
       </div>
       <label>
-        הערות
-        <textarea rows={2} value={g.notes ?? ''} onChange={(e) => setG({ ...g, notes: e.target.value })} placeholder="למשל: איך מלמדים, טיפים, חלקים חסרים" />
+        {t('הערות')}
+        <textarea rows={2} value={g.notes ?? ''} onChange={(e) => setG({ ...g, notes: e.target.value })} placeholder={t('למשל: איך מלמדים, טיפים, חלקים חסרים')} />
       </label>
       <label className="inline check">
         <input type="checkbox" checked={Boolean(g.featured)} onChange={(e) => setG({ ...g, featured: e.target.checked })} />
-        ⭐ חובה להכיר (יופיע ראשון בהמלצות)
+        {t('⭐ חובה להכיר (יופיע ראשון בהמלצות)')}
       </label>
       <div className="row">
         <button type="submit" className="primary" disabled={!valid}>
-          שמור
+          {t('שמור')}
         </button>
         <button type="button" onClick={onCancel}>
-          ביטול
+          {t('ביטול')}
         </button>
         {!isNew && (
           <button type="button" className="danger" onClick={() => void onDelete()}>
-            מחק
+            {t('מחק')}
           </button>
         )}
       </div>

@@ -1,5 +1,6 @@
 import type { InventoryItem, InventoryReport, StockLevel } from './types';
 import { LEVEL_LABEL } from './types';
+import { t } from './i18n';
 import { daysBetween } from './dates';
 
 /** Is the item asked about on this weekday? (no days = every day) */
@@ -58,15 +59,15 @@ export function restockList(items: InventoryItem[], latest: Map<string, Inventor
 
 /** Plain text for WhatsApp / notes. */
 export function formatRestockList(lines: RestockLine[], dateLabel: string): string {
-  if (lines.length === 0) return `אין חוסרים (${dateLabel})`;
+  if (lines.length === 0) return t('אין חוסרים ({date})', { date: dateLabel });
   const byCategory = new Map<string, RestockLine[]>();
   for (const l of lines) byCategory.set(l.item.category, [...(byCategory.get(l.item.category) ?? []), l]);
-  const out = [`🛒 רשימת קניות - ${dateLabel}`];
+  const out = [t('🛒 רשימת קניות - {date}', { date: dateLabel })];
   for (const [cat, list] of byCategory) {
-    out.push('', `${cat}:`);
+    out.push('', `${t(cat)}:`);
     for (const l of list) {
-      const extra = l.item.mode === 'count' && l.report.count !== undefined ? `${l.report.count}${l.item.unit ? ` ${l.item.unit}` : ''}` : LEVEL_LABEL[l.level];
-      out.push(`• ${l.item.name} (${extra})`);
+      const extra = l.item.mode === 'count' && l.report.count !== undefined ? `${l.report.count}${l.item.unit ? ` ${t(l.item.unit)}` : ''}` : t(LEVEL_LABEL[l.level]);
+      out.push(`• ${t(l.item.name)} (${extra})`);
     }
   }
   return out.join('\n');

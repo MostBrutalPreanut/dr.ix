@@ -4,11 +4,12 @@ import { useCollection } from '../lib/db';
 import { useReservations } from '../lib/wix';
 import type { Reservation } from '../lib/wix';
 import type { WixTable } from '../lib/types';
+import { t, tn } from '../lib/i18n';
 
 const STATUS_LABEL: Record<string, string> = {
-  REQUESTED: 'ממתינה לאישור',
-  SEATED: 'ישבו',
-  FINISHED: 'הסתיימה',
+  REQUESTED: tn('ממתינה לאישור'),
+  SEATED: tn('ישבו'),
+  FINISHED: tn('הסתיימה'),
 };
 
 /** Guests expected in total, and how many are still to come (not seated / finished yet). */
@@ -36,10 +37,10 @@ function ReservationCard({ r, tables }: { r: Reservation; tables: string[] }) {
     <article className={`card reservation${hasNote ? ' has-note' : ''}${quiet ? ' quiet' : ''}`}>
       <div className="res-head">
         <strong className="res-time">{r.time}</strong>
-        <span className="res-name">{r.firstName || 'ללא שם'}</span>
+        <span className="res-name">{r.firstName || t('ללא שם')}</span>
         <span className="chip">👥 {r.partySize}</span>
-        {tables.length > 0 && <span className="chip">🪑 {tables.includes('?') ? <Link to="/admin/wix">?</Link> : `שולחן ${tables.join(', ')}`}</span>}
-        {STATUS_LABEL[r.status] && <span className={`chip${r.status === 'REQUESTED' ? ' red' : ' soft'}`}>{STATUS_LABEL[r.status]}</span>}
+        {tables.length > 0 && <span className="chip">🪑 {tables.includes('?') ? <Link to="/admin/wix">?</Link> : t('שולחן {p1}', { p1: tables.join(', ') })}</span>}
+        {t(STATUS_LABEL[r.status]) && <span className={`chip${r.status === 'REQUESTED' ? ' red' : ' soft'}`}>{t(STATUS_LABEL[r.status])}</span>}
       </div>
       {r.notes.map((n, i) => (
         <p key={i} className="res-note">
@@ -70,38 +71,38 @@ export function Reservations({ date, showTitle = true }: { date: string; showTit
   const setupHint = (text: string) =>
     isManager ? (
       <p className="muted small-text">
-        {text} <Link to="/admin/wix">בדיקת חיבור Wix</Link>
+        {text} <Link to="/admin/wix">{t('בדיקת חיבור Wix')}</Link>
       </p>
     ) : null;
 
   return (
     <section>
       <div className="section-head">
-        {showTitle ? <h2>📅 הזמנות להיום{wix.state === 'ok' ? ` (${wix.reservations.length})` : ''}</h2> : <span />}
+        {showTitle ? <h2>{t('📅 הזמנות להיום')}{wix.state === 'ok' ? ` (${wix.reservations.length})` : ''}</h2> : <span />}
         {wix.state === 'ok' && wix.reservations.some((r) => r.notes.length || r.teamMessage) && (
           <span className="chip red">
-            📝 {wix.reservations.filter((r) => r.notes.length || r.teamMessage).length} עם הערות
+            📝 {wix.reservations.filter((r) => r.notes.length || r.teamMessage).length}{' '}{t('עם הערות')}
           </span>
         )}
       </div>
 
-      {wix.state === 'loading' && <p className="muted empty">טוען הזמנות…</p>}
-      {wix.state === 'not_configured' && setupHint('החיבור ל-Wix עוד לא הוגדר.')}
+      {wix.state === 'loading' && <p className="muted empty">{t('טוען הזמנות…')}</p>}
+      {wix.state === 'not_configured' && setupHint(t('החיבור ל-Wix עוד לא הוגדר.'))}
       {wix.state === 'error' && (wix.reason !== 'unreachable' || isManager) && (
         <>
-          <p className="muted small-text">לא הצלחנו לטעון את ההזמנות כרגע. אפשר לבדוק ישירות ב-Wix.</p>
-          {wix.reason === 'wix_auth' && setupHint('Wix דחתה את המפתח (חסרה הרשאה או שהמפתח בוטל).')}
-          {wix.reason === 'unreachable' && setupHint('אי אפשר להגיע לפונקציה.')}
+          <p className="muted small-text">{t('לא הצלחנו לטעון את ההזמנות כרגע. אפשר לבדוק ישירות ב-Wix.')}</p>
+          {wix.reason === 'wix_auth' && setupHint(t('Wix דחתה את המפתח (חסרה הרשאה או שהמפתח בוטל).'))}
+          {wix.reason === 'unreachable' && setupHint(t('אי אפשר להגיע לפונקציה.'))}
         </>
       )}
-      {wix.state === 'ok' && wix.reservations.length === 0 && <p className="muted empty">אין הזמנות להיום.</p>}
+      {wix.state === 'ok' && wix.reservations.length === 0 && <p className="muted empty">{t('אין הזמנות להיום.')}</p>}
       {wix.state === 'ok' && wix.reservations.length > 0 && (() => {
-        const t = guestTotals(wix.reservations);
+        const totals = guestTotals(wix.reservations);
         return (
           <div className="card guest-total">
-            <strong>👥 {t.guests} אורחים צפויים</strong>
+            <strong>👥 {totals.guests}{' '}{t('אורחים צפויים')}</strong>
             <span className="muted small-text">
-              ב-{t.bookings} הזמנות{t.waiting !== t.guests && ` · עוד ${t.waiting} לא הגיעו`}
+              {t('ב-{bookings} הזמנות', { bookings: totals.bookings })}{totals.waiting !== totals.guests && t(' · עוד {waiting} לא הגיעו', { waiting: totals.waiting })}
             </span>
           </div>
         );
@@ -122,15 +123,15 @@ export function ReservationsSummary({ date }: { date: string }) {
   return (
     <Link to="/reservations" className={`card summary-line${withNotes ? ' has-note' : ''}`}>
       <span>
-        📅 <strong>{wix.reservations.length}</strong> הזמנות · 👥 <strong>{guestTotals(wix.reservations).guests}</strong> אורחים
+        📅 <strong>{wix.reservations.length}</strong>{' '}{t('הזמנות · 👥')}{' '}<strong>{guestTotals(wix.reservations).guests}</strong>{' '}{t('אורחים')}
         {withNotes > 0 && (
           <>
             {' '}
-            · <strong>{withNotes}</strong> עם הערות
+            · <strong>{withNotes}</strong>{' '}{t('עם הערות')}
           </>
         )}
       </span>
-      <span className="muted">לצפייה ←</span>
+      <span className="muted">{t('לצפייה ←')}</span>
     </Link>
   );
 }

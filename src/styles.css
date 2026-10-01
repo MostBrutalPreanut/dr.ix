@@ -1033,3 +1033,33 @@ button.linklike {
   background: none;
   font-weight: 400;
 }
+
+/* language switch */
+.lang-switch {
+  white-space: nowrap;
+}
+.login .lang-switch {
+  align-self: flex-end;
+}
+.topbar .lang-switch {
+  margin-inline-start: auto;
+  margin-inline-end: 0.5rem;
+}
+
+/* the handbook chapters are written in Hebrew whatever the app language is */
+.md {
+  direction: rtl;
+}
+/* free text typed by the staff is aligned by its own language */
+.note-text,
+.res-note,
+input,
+textarea {
+  unicode-bidi: plaintext;
+}
+.seg button {
+  white-space: normal;
+  min-width: 0;
+  line-height: 1.2;
+  padding-inline: 0.4rem;
+}

@@ -5,9 +5,20 @@ import { isShared } from '../lib/db';
 import logoUrl from '../assets/logo.png';
 import { useConnection } from '../lib/connection';
 import { ErrorBoundary } from './ErrorBoundary';
+import { t, useLang } from '../lib/i18n';
 
 export function Logo({ size = 40, className = '' }: { size?: number; className?: string }) {
   return <img src={logoUrl} width={size} height={size} alt="DR IX" className={className} />;
+}
+
+/** Hebrew / English switch (remembered for the signed-in person on this device). */
+export function LangSwitch() {
+  const { lang, setLang } = useLang();
+  return (
+    <button type="button" className="small lang-switch" onClick={() => setLang(lang === 'he' ? 'en' : 'he')} aria-label="Language / שפה" lang={lang === 'he' ? 'en' : 'he'}>
+      🌐 {lang === 'he' ? 'English' : 'עברית'}
+    </button>
+  );
 }
 
 export function Layout() {
@@ -26,55 +37,56 @@ export function Layout() {
         <header className="topbar">
           <Link to="/" className="brand">
             <Logo size={34} />
-            <span>דריקס OS</span>
+            <span>{t('דריקס OS')}</span>
           </Link>
-          <Link to="/profile" className="me" aria-label="הפרופיל שלי">
+          <LangSwitch />
+          <Link to="/profile" className="me" aria-label={t('הפרופיל שלי')}>
             <span className="avatar">{user?.name.slice(0, 1)}</span>
             <span>{user?.name}</span>
           </Link>
         </header>
-        <nav className="tabbar" aria-label="ניווט ראשי">
+        <nav className="tabbar" aria-label={t('ניווט ראשי')}>
           <NavLink to="/" end>
             <span className="ico">📋</span>
-            <span>היום</span>
+            <span>{t('היום')}</span>
           </NavLink>
           {isShared && (
             <NavLink to="/reservations">
               <span className="ico">📅</span>
-              <span>הזמנות</span>
+              <span>{t('הזמנות')}</span>
             </NavLink>
           )}
           <NavLink to="/inventory">
             <span className="ico">📦</span>
-            <span>מלאי</span>
+            <span>{t('מלאי')}</span>
           </NavLink>
           <NavLink to="/handbook">
             <span className="ico">📖</span>
-            <span>נהלים</span>
+            <span>{t('נהלים')}</span>
           </NavLink>
           <NavLink to="/games">
             <span className="ico">🎲</span>
-            <span>משחקים</span>
+            <span>{t('משחקים')}</span>
           </NavLink>
           {canEditInventory && (
             <NavLink to="/admin">
               <span className="ico">⚙️</span>
-              <span>ניהול</span>
+              <span>{t('ניהול')}</span>
             </NavLink>
           )}
         </nav>
       </div>
       {!isShared && (
         <div className="banner-local">
-          מצב מקומי: הנתונים נשמרים רק במכשיר הזה. כדי לעבוד יחד מכמה מכשירים יש לחבר Supabase.
+          {t('מצב מקומי: הנתונים נשמרים רק במכשיר הזה. כדי לעבוד יחד מכמה מכשירים יש לחבר Supabase.')}
         </div>
       )}
       {!connection.ok && (
         <div className="banner-warn" role="status">
-          <strong>יש בעיה בטעינת נתונים מהשרת.</strong> מנסה שוב אוטומטית.
+          <strong>{t('יש בעיה בטעינת נתונים מהשרת.')}</strong>{' '}{t('מנסה שוב אוטומטית.')}
           <small className="block">{connection.message}</small>
           <button type="button" className="small" onClick={() => window.location.reload()}>
-            רענן
+            {t('רענן')}
           </button>
         </div>
       )}

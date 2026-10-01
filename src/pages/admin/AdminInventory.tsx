@@ -5,11 +5,12 @@ import { WEEKDAY_NAMES } from '../../lib/dates';
 import { categoriesOf, itemsOfCategory, moveItem, parseBulk } from '../../lib/inventory';
 import type { InventoryItem, InventoryMode } from '../../lib/types';
 import { seedInventory } from '../../seed/inventory';
+import { t, tn } from '../../lib/i18n';
 
 const MODE_LABEL: Record<InventoryMode, string> = {
-  status: 'מספיק / מעט / נגמר',
-  count: 'ספירה (מספר)',
-  photo: 'צילום בלבד',
+  status: tn('מספיק / מעט / נגמר'),
+  count: tn('ספירה (מספר)'),
+  photo: tn('צילום בלבד'),
 };
 
 export default function AdminInventory() {
@@ -29,7 +30,7 @@ export default function AdminInventory() {
       await action();
       setMsg('');
     } catch {
-      setMsg('השמירה נכשלה - בדקו חיבור והרשאה ונסו שוב');
+      setMsg(t('השמירה נכשלה - בדקו חיבור והרשאה ונסו שוב'));
     }
   }
 
@@ -40,7 +41,7 @@ export default function AdminInventory() {
   }
 
   async function renameCategory(cat: string) {
-    const name = prompt('שם חדש לקטגוריה:', cat)?.trim();
+    const name = prompt(t('שם חדש לקטגוריה:'), cat)?.trim();
     if (!name || name === cat) return;
     await guard(async () => {
       for (const i of inv.items.filter((x) => x.category === cat)) await inv.save({ ...i, category: name });
@@ -61,7 +62,7 @@ export default function AdminInventory() {
           });
         }}
         onDelete={async () => {
-          if (confirm(`למחוק את "${editing.name}"? אפשר גם לכבות אותו במקום למחוק.`)) {
+          if (confirm(t('למחוק את "{name}"? אפשר גם לכבות אותו במקום למחוק.', { name: editing.name }))) {
             await guard(async () => {
               await inv.remove(editing.id);
               setEditing(null);
@@ -82,7 +83,7 @@ export default function AdminInventory() {
           await guard(async () => {
             for (const i of fresh) await inv.save(i);
             setBulk(false);
-            setMsg(fresh.length ? `נוספו ${fresh.length} פריטים` : 'לא נוספו פריטים חדשים');
+            setMsg(fresh.length ? t('נוספו {length} פריטים', { length: fresh.length }) : t('לא נוספו פריטים חדשים'));
           });
         }}
       />
@@ -91,9 +92,9 @@ export default function AdminInventory() {
 
   return (
     <>
-      <Link to="/admin" className="back">← ניהול</Link>
-      <h1>📦 ניהול מלאי</h1>
-      <p className="muted">לחצו על פריט כדי לערוך אותו. החיצים משנים את הסדר ברשימה.</p>
+      <Link to="/admin" className="back">{t('← ניהול')}</Link>
+      <h1>{t('📦 ניהול מלאי')}</h1>
+      <p className="muted">{t('לחצו על פריט כדי לערוך אותו. החיצים משנים את הסדר ברשימה.')}</p>
 
       <div className="row">
         <button
@@ -103,18 +104,18 @@ export default function AdminInventory() {
             setEditing({ id: newId(), name: '', category: categories[0] ?? '', mode: 'status', days: [], active: true, order: newOrder() })
           }
         >
-          + פריט
+          {t('+ פריט')}
         </button>
         <button type="button" onClick={() => setBulk(true)}>
-          + הרבה פריטים
+          {t('+ הרבה פריטים')}
         </button>
       </div>
       {msg && <p className="muted" role="status">{msg}</p>}
-      <input className="search" type="search" placeholder="חיפוש פריט…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      <input className="search" type="search" placeholder={t('חיפוש פריט…')} value={query} onChange={(e) => setQuery(e.target.value)} />
 
-      {inv.loading && <p className="muted">טוען…</p>}
+      {inv.loading && <p className="muted">{t('טוען…')}</p>}
       {!inv.loading && inv.items.length === 0 && (
-        <p className="muted">אין פריטים עדיין. הוסיפו פריט, או בקשו ממנהל להיכנס פעם אחת כדי לטעון את הרשימה ההתחלתית.</p>
+        <p className="muted">{t('אין פריטים עדיין. הוסיפו פריט, או בקשו ממנהל להיכנס פעם אחת כדי לטעון את הרשימה ההתחלתית.')}</p>
       )}
 
       {categories.map((cat) => {
@@ -123,26 +124,26 @@ export default function AdminInventory() {
         return (
           <section key={cat}>
             <div className="section-head">
-              <h2>{cat}</h2>
+              <h2>{t(cat)}</h2>
               <button type="button" className="small" onClick={() => void renameCategory(cat)}>
-                שנה שם קטגוריה
+                {t('שנה שם קטגוריה')}
               </button>
             </div>
             <div className="card list">
               {list.map((i) => (
                 <div key={i.id} className={`li inv-admin-row${i.active ? '' : ' off'}`}>
                   <button type="button" className="li-body linklike" onClick={() => setEditing(i)}>
-                    <strong>{i.name}</strong>
+                    <strong>{t(i.name)}</strong>
                     <span className="chips">
-                      <span className="chip">{i.mode === 'status' ? 'סטטוס' : i.mode === 'count' ? `ספירה${i.unit ? ` · ${i.unit}` : ''}` : 'צילום'}</span>
-                      <span className="chip soft">{i.days.length === 0 ? 'כל יום' : i.days.map((d) => WEEKDAY_NAMES[d]).join(', ')}</span>
-                      {!i.active && <span className="chip">כבוי</span>}
+                      <span className="chip">{i.mode === 'status' ? t('סטטוס') : i.mode === 'count' ? t('ספירה{p1}', { p1: i.unit ? ` · ${i.unit}` : '' }) : t('צילום')}</span>
+                      <span className="chip soft">{i.days.length === 0 ? t('כל יום') : i.days.map((d) => t(WEEKDAY_NAMES[d])).join(', ')}</span>
+                      {!i.active && <span className="chip">{t('כבוי')}</span>}
                     </span>
                   </button>
                   {!q && (
                     <span className="row actions">
-                      <button type="button" className="small" aria-label={`הזז למעלה: ${i.name}`} onClick={() => void move(i.id, -1)}>▲</button>
-                      <button type="button" className="small" aria-label={`הזז למטה: ${i.name}`} onClick={() => void move(i.id, 1)}>▼</button>
+                      <button type="button" className="small" aria-label={t('הזז למעלה: {name}', { name: i.name })} onClick={() => void move(i.id, -1)}>▲</button>
+                      <button type="button" className="small" aria-label={t('הזז למטה: {name}', { name: i.name })} onClick={() => void move(i.id, 1)}>▼</button>
                     </span>
                   )}
                 </div>
@@ -158,8 +159,8 @@ export default function AdminInventory() {
 function CategoryField({ value, categories, onChange }: { value: string; categories: string[]; onChange(v: string): void }) {
   return (
     <label>
-      קטגוריה
-      <input list="inv-cats" value={value} onChange={(e) => onChange(e.target.value)} placeholder="למשל: מקרר" required />
+      {t('קטגוריה')}
+      <input list="inv-cats" value={value} onChange={(e) => onChange(e.target.value)} placeholder={t('למשל: מקרר')} required />
       <datalist id="inv-cats">
         {categories.map((c) => (
           <option key={c} value={c} />
@@ -172,7 +173,7 @@ function CategoryField({ value, categories, onChange }: { value: string; categor
 function DaysField({ days, onChange }: { days: number[]; onChange(d: number[]): void }) {
   return (
     <div>
-      <span className="muted small-text block">באילו ימים בודקים (בלי בחירה = כל יום)</span>
+      <span className="muted small-text block">{t('באילו ימים בודקים (בלי בחירה = כל יום)')}</span>
       <div className="days">
         {WEEKDAY_NAMES.map((n, d) => (
           <button
@@ -182,7 +183,7 @@ function DaysField({ days, onChange }: { days: number[]; onChange(d: number[]): 
             aria-pressed={days.includes(d)}
             onClick={() => onChange(days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort())}
           >
-            {n}
+            {t(n)}
           </button>
         ))}
       </div>
@@ -205,15 +206,15 @@ function ItemEditor({
   onCancel(): void;
   onDelete(): Promise<void>;
 }) {
-  const [t, setT] = useState(item);
-  const valid = t.name.trim() !== '' && t.category.trim() !== '';
+  const [f, setF] = useState(item);
+  const valid = f.name.trim() !== '' && f.category.trim() !== '';
   return (
     <form
       className="form"
       onSubmit={(e) => {
         e.preventDefault();
         if (!valid) return;
-        const clean: InventoryItem = { ...t, name: t.name.trim(), category: t.category.trim(), hint: t.hint?.trim() || undefined, unit: t.unit?.trim() || undefined };
+        const clean: InventoryItem = { ...f, name: f.name.trim(), category: f.category.trim(), hint: f.hint?.trim() || undefined, unit: f.unit?.trim() || undefined };
         if (clean.mode !== 'count') {
           delete clean.unit;
           delete clean.min;
@@ -221,65 +222,65 @@ function ItemEditor({
         void onSave(clean);
       }}
     >
-      <h1>{isNew ? 'פריט חדש' : 'עריכת פריט'}</h1>
+      <h1>{isNew ? t('פריט חדש') : t('עריכת פריט')}</h1>
       <label>
-        שם הפריט
-        <input value={t.name} onChange={(e) => setT({ ...t, name: e.target.value })} required />
+        {t('שם הפריט')}
+        <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
       </label>
-      <CategoryField value={t.category} categories={categories} onChange={(category) => setT({ ...t, category })} />
+      <CategoryField value={f.category} categories={categories} onChange={(category) => setF({ ...f, category })} />
       <label>
-        איך מדווחים
-        <select value={t.mode} onChange={(e) => setT({ ...t, mode: e.target.value as InventoryMode })}>
+        {t('איך מדווחים')}
+        <select value={f.mode} onChange={(e) => setF({ ...f, mode: e.target.value as InventoryMode })}>
           {(Object.keys(MODE_LABEL) as InventoryMode[]).map((m) => (
             <option key={m} value={m}>
-              {MODE_LABEL[m]}
+              {t(MODE_LABEL[m])}
             </option>
           ))}
         </select>
       </label>
-      {t.mode === 'count' && (
+      {f.mode === 'count' && (
         <div className="row">
           <label style={{ flex: 1 }}>
-            יחידה (ארגזים, שקיות…)
-            <input value={t.unit ?? ''} onChange={(e) => setT({ ...t, unit: e.target.value })} />
+            {t('יחידה (ארגזים, שקיות…)')}
+            <input value={f.unit ?? ''} onChange={(e) => setF({ ...f, unit: e.target.value })} />
           </label>
           <label style={{ flex: 1 }}>
-            "מעט" עד כמות
+            {t('"מעט" עד כמות')}
             <input
               type="number"
               inputMode="numeric"
               min={0}
-              value={t.min ?? ''}
-              onChange={(e) => setT({ ...t, min: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)) })}
+              value={f.min ?? ''}
+              onChange={(e) => setF({ ...f, min: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)) })}
             />
           </label>
         </div>
       )}
       <label>
-        הסבר קצר מתחת לשם (לא חובה)
-        <input value={t.hint ?? ''} onChange={(e) => setT({ ...t, hint: e.target.value })} placeholder="למשל: יש יותר מ-5 שרוולים" />
+        {t('הסבר קצר מתחת לשם (לא חובה)')}
+        <input value={f.hint ?? ''} onChange={(e) => setF({ ...f, hint: e.target.value })} placeholder={t('למשל: יש יותר מ-5 שרוולים')} />
       </label>
-      <DaysField days={t.days} onChange={(days) => setT({ ...t, days })} />
-      {t.mode !== 'photo' && (
+      <DaysField days={f.days} onChange={(days) => setF({ ...f, days })} />
+      {f.mode !== 'photo' && (
         <label className="inline check">
-          <input type="checkbox" checked={!!t.photo} onChange={(e) => setT({ ...t, photo: e.target.checked })} />
-          לבקש גם תמונה
+          <input type="checkbox" checked={!!f.photo} onChange={(e) => setF({ ...f, photo: e.target.checked })} />
+          {t('לבקש גם תמונה')}
         </label>
       )}
       <label className="inline check">
-        <input type="checkbox" checked={t.active} onChange={(e) => setT({ ...t, active: e.target.checked })} />
-        פעיל (יופיע לעובדים)
+        <input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} />
+        {t('פעיל (יופיע לעובדים)')}
       </label>
       <div className="row">
         <button type="submit" className="primary" disabled={!valid}>
-          שמור
+          {t('שמור')}
         </button>
         <button type="button" onClick={onCancel}>
-          ביטול
+          {t('ביטול')}
         </button>
         {!isNew && (
           <button type="button" className="danger" onClick={() => void onDelete()}>
-            מחק
+            {t('מחק')}
           </button>
         )}
       </div>
@@ -309,30 +310,30 @@ function BulkAdd({
         if (valid) void onSave(text, { category: category.trim(), mode, days });
       }}
     >
-      <h1>הוספת כמה פריטים</h1>
-      <p className="muted">כתבו פריט בכל שורה. כולם ייכנסו לאותה קטגוריה ויום בדיקה, ואפשר לשנות כל אחד אחר כך.</p>
+      <h1>{t('הוספת כמה פריטים')}</h1>
+      <p className="muted">{t('כתבו פריט בכל שורה. כולם ייכנסו לאותה קטגוריה ויום בדיקה, ואפשר לשנות כל אחד אחר כך.')}</p>
       <CategoryField value={category} categories={categories} onChange={setCategory} />
       <label>
-        איך מדווחים
+        {t('איך מדווחים')}
         <select value={mode} onChange={(e) => setMode(e.target.value as InventoryMode)}>
           {(Object.keys(MODE_LABEL) as InventoryMode[]).map((m) => (
             <option key={m} value={m}>
-              {MODE_LABEL[m]}
+              {t(MODE_LABEL[m])}
             </option>
           ))}
         </select>
       </label>
       <DaysField days={days} onChange={setDays} />
       <label>
-        הפריטים (שורה לכל פריט)
+        {t('הפריטים (שורה לכל פריט)')}
         <textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} />
       </label>
       <div className="row">
         <button type="submit" className="primary" disabled={!valid}>
-          הוסף
+          {t('הוסף')}
         </button>
         <button type="button" onClick={onCancel}>
-          ביטול
+          {t('ביטול')}
         </button>
       </div>
     </form>
