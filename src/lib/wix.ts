@@ -64,6 +64,27 @@ export async function fetchReservations(date: string, debug = false): Promise<Wi
   }
 }
 
+export type FunctionDiagnosis = 'missing' | 'jwt_on' | 'reachable' | 'network';
+
+/**
+ * Works out why the function cannot be reached. A plain GET (no custom headers) needs no CORS
+ * preflight, so even the gateway's error answers stay readable from the browser.
+ *   404 -> there is no function called "wix"
+ *   401 -> it exists but "Verify JWT" is still on
+ *   405 -> it exists and answers (our function only accepts POST)
+ */
+export async function diagnoseFunction(): Promise<FunctionDiagnosis> {
+  if (!supabaseUrl) return 'network';
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/wix`);
+    if (res.status === 404) return 'missing';
+    if (res.status === 401 || res.status === 403) return 'jwt_on';
+    return 'reachable';
+  } catch {
+    return 'network';
+  }
+}
+
 /** Today's reservations, refreshed every minute and when the app comes back to the foreground. */
 export function useReservations(date: string): WixState {
   const [state, setState] = useState<WixState>(isShared ? { state: 'loading' } : { state: 'off' });

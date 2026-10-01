@@ -36,6 +36,8 @@ export function Reservations({ date }: { date: string }) {
   const wix = useReservations(date);
 
   if (wix.state === 'off') return null;
+  // employees are not shown a setup problem - the section simply is not there until it works
+  if (!isManager && (wix.state === 'not_configured' || (wix.state === 'error' && wix.reason === 'unreachable'))) return null;
 
   const setupHint = (text: string) =>
     isManager ? (
@@ -57,10 +59,11 @@ export function Reservations({ date }: { date: string }) {
 
       {wix.state === 'loading' && <p className="muted empty">טוען הזמנות…</p>}
       {wix.state === 'not_configured' && setupHint('החיבור ל-Wix עוד לא הוגדר.')}
-      {wix.state === 'error' && (
+      {wix.state === 'error' && (wix.reason !== 'unreachable' || isManager) && (
         <>
           <p className="muted small-text">לא הצלחנו לטעון את ההזמנות כרגע. אפשר לבדוק ישירות ב-Wix.</p>
           {wix.reason === 'wix_auth' && setupHint('Wix דחתה את המפתח (חסרה הרשאה או שהמפתח בוטל).')}
+          {wix.reason === 'unreachable' && setupHint('אי אפשר להגיע לפונקציה.')}
         </>
       )}
       {wix.state === 'ok' && wix.reservations.length === 0 && <p className="muted empty">אין הזמנות להיום.</p>}

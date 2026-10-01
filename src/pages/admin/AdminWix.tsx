@@ -1,18 +1,32 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchReservations } from '../../lib/wix';
-import type { WixState } from '../../lib/wix';
+import { diagnoseFunction, fetchReservations } from '../../lib/wix';
+import type { FunctionDiagnosis, WixState } from '../../lib/wix';
 import { useBusinessDate } from '../../lib/useBusinessDate';
+
+const UNREACHABLE: Record<FunctionDiagnosis, string> = {
+  missing:
+    'ב-Supabase אין פונקציה בשם wix. פתח Edge Functions ובדוק שהשם הוא בדיוק wix (אותיות קטנות, בלי רווחים או תוספות) ושהיא מופיעה כ-Active. אם היא נקראת אחרת, צור פונקציה חדשה בשם wix.',
+  jwt_on:
+    'הפונקציה קיימת, אבל Supabase עדיין בודק JWT. פתח את הפונקציה wix בהגדרות, כבה את Verify JWT ושמור (ייתכן שצריך לפרוס אותה שוב).',
+  reachable:
+    'הפונקציה קיימת וענתה, אבל הבקשה מהאפליקציה נכשלה. פתח ב-Supabase את Edge Functions ← wix ← Logs ושלח צילום של השגיאה האחרונה.',
+  network: 'אין חיבור לשרת. בדוק את החיבור לאינטרנט ונסה שוב.',
+};
 
 /** Manager-only connection check: shows whether Wix answers and where the guests' notes live. */
 export default function AdminWix() {
   const today = useBusinessDate();
   const [result, setResult] = useState<WixState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [why, setWhy] = useState<FunctionDiagnosis | null>(null);
 
   async function check() {
     setBusy(true);
-    setResult(await fetchReservations(today, true));
+    setWhy(null);
+    const r = await fetchReservations(today, true);
+    if (r.state === 'error' && r.reason === 'unreachable') setWhy(await diagnoseFunction());
+    setResult(r);
     setBusy(false);
   }
 
@@ -37,6 +51,7 @@ export default function AdminWix() {
       {result?.state === 'error' && (
         <div className="card">
           <strong>🔴 שגיאה: {{ wix_auth: 'Wix דחתה את המפתח', wix_error: 'Wix החזירה שגיאה', unreachable: 'אי אפשר להגיע לפונקציה' }[result.reason]}</strong>
+          {result.reason === 'unreachable' && why && <p>{UNREACHABLE[why]}</p>}
           {result.detail && <pre className="mono-box">{result.detail}</pre>}
         </div>
       )}
