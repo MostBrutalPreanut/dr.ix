@@ -55,3 +55,42 @@ export function splitTips(
 
   return Object.fromEntries(workers.map((w, i) => [w.id, floors[i] / 100]));
 }
+
+export interface DayTips {
+  date: string;
+  total: number;
+  workers: TipWorker[];
+  /** split of the day's total (empty when nobody is marked as working) */
+  shares: Record<string, number>;
+}
+
+/** Tips of one business day: sum of the entries, split between the people who worked. */
+export function dayTips(
+  date: string,
+  entries: { date: string; amount: number }[],
+  workers: { date: string; employeeId: string; reinforcement?: boolean; hours?: number }[],
+  weekday: number,
+): DayTips {
+  const total = Math.round(entries.filter((e) => e.date === date).reduce((n, e) => n + e.amount * 100, 0)) / 100;
+  const list: TipWorker[] = workers
+    .filter((w) => w.date === date)
+    .map((w) => ({ id: w.employeeId, reinforcement: w.reinforcement, hours: w.hours }));
+  return { date, total, workers: list, shares: splitTips(total, list, fullShiftHours(weekday)) };
+}
+
+/** Every day of the given entries/workers, newest first. */
+export function monthDays(
+  entries: { date: string; amount: number }[],
+  workers: { date: string; employeeId: string; reinforcement?: boolean; hours?: number }[],
+  weekdayOf: (date: string) => number,
+): DayTips[] {
+  const dates = [...new Set([...entries.map((e) => e.date), ...workers.map((w) => w.date)])].sort().reverse();
+  return dates.map((d) => dayTips(d, entries, workers, weekdayOf(d)));
+}
+
+/** What every person earned over the days (agorot-exact). */
+export function totalsByPerson(days: DayTips[]): Record<string, number> {
+  const agorot: Record<string, number> = {};
+  for (const d of days) for (const [id, v] of Object.entries(d.shares)) agorot[id] = (agorot[id] ?? 0) + Math.round(v * 100);
+  return Object.fromEntries(Object.entries(agorot).map(([id, a]) => [id, a / 100]));
+}

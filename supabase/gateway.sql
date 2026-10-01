@@ -72,7 +72,10 @@ insert into public.acl (collection, read_role, write_role) values
   ('meta',            'manager', 'manager'),
   ('inventoryItems',   'any',    'inventory'),
   ('inventoryReports', 'any',    'any'),
-  ('inventoryPhotos',  'any',    'any')
+  ('inventoryPhotos',  'any',    'any'),
+  ('tipEntries',       'any',    'any'),
+  ('tipWorkers',       'any',    'any'),
+  ('wixTables',        'any',    'manager')
 on conflict (collection) do nothing;
 
 -- ---------- lock the tables: only the functions below can touch them ---------------

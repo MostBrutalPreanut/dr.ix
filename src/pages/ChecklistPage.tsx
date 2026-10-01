@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { idPrefix, useCollection } from '../lib/db';
+import { backend, idPrefix, useCollection } from '../lib/db';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { formatLongDate, formatTime } from '../lib/dates';
 import type { Checklist, ChecklistCheck, ChecklistClosure } from '../lib/types';
@@ -43,6 +43,17 @@ export default function ChecklistPage() {
       });
   }
 
+  async function markAll() {
+    const missing = allItems.filter((i) => !byItem.has(i.id));
+    if (missing.length === 0) return;
+    if (!confirm(`בטוחים שתרצו לסמן הכל? יסומנו עוד ${missing.length} סעיפים בשמכם.`)) return;
+    const at = new Date().toISOString();
+    const doc = (itemId: string): ChecklistCheck => ({ id: checkId(itemId), date: today, checklistId: list!.id, itemId, by: user!.id, at });
+    const last = missing[missing.length - 1];
+    await Promise.all(missing.slice(0, -1).map((i) => backend.upsert('checks', doc(i.id))));
+    await checks.save(doc(last.id)); // the last one also refreshes the screen
+  }
+
   async function close() {
     await closures.save({
       id: `${today}|${list!.id}`,
@@ -66,6 +77,12 @@ export default function ChecklistPage() {
       <p className="muted small-text">
         {done}/{allItems.length} הושלמו
       </p>
+
+      {!closure && !complete && (
+        <button type="button" className="small" onClick={() => void markAll()}>
+          ✓ סמן הכל
+        </button>
+      )}
 
       {closure && (
         <div className="card success">

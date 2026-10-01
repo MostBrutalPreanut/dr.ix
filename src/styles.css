@@ -1004,3 +1004,32 @@ button.linklike {
     font-size: 0.7rem;
   }
 }
+
+.guest-total {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.3rem 0.8rem;
+}
+.li.emp label.inline {
+  flex: none;
+}
+
+.form label.inline input.age {
+  width: 5rem;
+}
+.li.emp label.inline {
+  white-space: nowrap;
+}
+/* a labelled checkbox shares the class name with the checklist tick box - undo the tick box look */
+.form label.check {
+  display: flex;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-weight: 400;
+}

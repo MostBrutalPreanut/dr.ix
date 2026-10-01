@@ -17,6 +17,7 @@ import AdminTasks from './pages/admin/AdminTasks';
 import AdminWix from './pages/admin/AdminWix';
 import AdminInventory from './pages/admin/AdminInventory';
 import InventoryPage from './pages/InventoryPage';
+import TipsPage from './pages/TipsPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 function Gate() {
@@ -29,6 +30,7 @@ function Gate() {
         <Route index element={<Today />} />
         <Route path="checklist/:id" element={<ChecklistPage />} />
         <Route path="reservations" element={<ReservationsPage />} />
+        <Route path="tips" element={<TipsPage />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="handbook" element={<HandbookList />} />
         <Route path="handbook/:id" element={<HandbookSectionPage />} />

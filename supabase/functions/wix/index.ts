@@ -72,7 +72,7 @@ async function whoIs(token: string, apikey: string): Promise<{ role: string } | 
 interface WixReservation {
   id?: string;
   status?: string;
-  details?: { startDate?: string; partySize?: number };
+  details?: { startDate?: string; partySize?: number; tableIds?: string[]; tables?: { ids?: string[] } };
   reservee?: { firstName?: string; customFields?: Record<string, unknown> };
   teamMessage?: string;
 }
@@ -133,6 +133,8 @@ interface Reservation {
   notes: string[];
   /** What the staff wrote in "Team notes" in the Wix dashboard. */
   teamMessage: string;
+  /** Wix table ids (names are not in the API; the app maps them to table numbers). */
+  tableIds: string[];
 }
 
 function normalise(list: WixReservation[], date: string): Reservation[] {
@@ -155,6 +157,7 @@ function normalise(list: WixReservation[], date: string): Reservation[] {
       status: r.status ?? '',
       notes,
       teamMessage: (r.teamMessage ?? '').trim(),
+      tableIds: [...new Set([...(r.details?.tableIds ?? []), ...(r.details?.tables?.ids ?? [])])].filter((x) => typeof x === 'string'),
     });
   }
   return out.sort((a, b) => a.start.localeCompare(b.start));

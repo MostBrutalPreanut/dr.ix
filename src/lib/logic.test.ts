@@ -244,3 +244,34 @@ describe('inventory', () => {
     expect(out.map((i) => i.order)).toEqual([91, 92]);
   });
 });
+
+import { dayTips, monthDays, totalsByPerson } from './tips';
+
+describe('tips by day and month', () => {
+  const entries = [
+    { date: '2026-10-01', amount: 100 },
+    { date: '2026-10-01', amount: 50.5 },
+    { date: '2026-10-02', amount: 90 },
+  ];
+  const workers = [
+    { date: '2026-10-01', employeeId: 'a' },
+    { date: '2026-10-01', employeeId: 'b' },
+    { date: '2026-10-01', employeeId: 'c', reinforcement: true, hours: 4 },
+    { date: '2026-10-02', employeeId: 'a' },
+  ];
+  it('sums entries and splits to the agora', () => {
+    const d = dayTips('2026-10-01', entries, workers, 4);
+    expect(d.total).toBe(150.5);
+    expect(Object.values(d.shares).reduce((n, v) => n + v, 0)).toBeCloseTo(150.5, 2);
+    expect(d.shares.c).toBeLessThan(d.shares.a);
+  });
+  it('totals per person across days', () => {
+    const days = monthDays(entries, workers, () => 4);
+    expect(days.map((d) => d.date)).toEqual(['2026-10-02', '2026-10-01']);
+    const t = totalsByPerson(days);
+    expect(t.a).toBeCloseTo(90 + dayTips('2026-10-01', entries, workers, 4).shares.a, 2);
+  });
+  it('a day with tips but nobody marked has no shares', () => {
+    expect(dayTips('2026-10-02', entries, [], 4).shares).toEqual({});
+  });
+});

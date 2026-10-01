@@ -43,6 +43,7 @@ function GameCard({ game, onEdit }: { game: Game; onEdit?: () => void }) {
           </span>
         ))}
         {game.durationMin !== undefined && <span className="chip">⏱ {game.durationMin} דק'</span>}
+        {game.shelf && <span className="chip red">📍 מדף {game.shelf}</span>}
       </div>
       {game.notes && <p className="muted small-text">{game.notes}</p>}
     </article>
@@ -69,7 +70,7 @@ export default function Games() {
   const all = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...items]
-      .filter((g) => !q || g.name.toLowerCase().includes(q))
+      .filter((g) => !q || g.name.toLowerCase().includes(q) || (g.shelf ?? '').toLowerCase() === q)
       .sort((a, b) => a.name.localeCompare(b.name, 'he'));
   }, [items, search]);
 
@@ -181,7 +182,7 @@ export default function Games() {
         </>
       ) : (
         <>
-          <input className="search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="חיפוש משחק" aria-label="חיפוש משחק" />
+          <input className="search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="חיפוש משחק או מספר מדף" aria-label="חיפוש משחק" />
           {all.map((g) => (
             <GameCard key={g.id} game={g} onEdit={edit?.(g)} />
           ))}
@@ -218,6 +219,8 @@ function GameEditor({
         if (clean.minAge === undefined) delete clean.minAge;
         if (clean.durationMin === undefined) delete clean.durationMin;
         if (!clean.notes?.trim()) delete clean.notes;
+        clean.shelf = clean.shelf?.trim();
+        if (!clean.shelf) delete clean.shelf;
         if (!clean.featured) delete clean.featured;
         void onSave(clean);
       }}
@@ -247,6 +250,10 @@ function GameEditor({
           <input type="number" inputMode="numeric" min={1} value={g.durationMin ?? ''} placeholder="אופציונלי" onChange={(e) => setG({ ...g, durationMin: num(e.target.value) })} />
         </label>
       </div>
+      <label>
+        מספר מדף
+        <input value={g.shelf ?? ''} onChange={(e) => setG({ ...g, shelf: e.target.value })} placeholder="אפשר להשאיר ריק ולמלא אחר כך" />
+      </label>
       <div>
         <span className="label">סגנון</span>
         <div className="chips">

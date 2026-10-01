@@ -30,6 +30,25 @@ export default function Today() {
   });
 
   const [composing, setComposing] = useState(false);
+  // "hide" is a personal, per-device choice: the note stays for everyone else
+  const hideKey = `drix:hiddenNotes:${user?.id ?? ''}`;
+  const [hidden, setHidden] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(hideKey) ?? '[]') as string[];
+    } catch {
+      return [];
+    }
+  });
+  const [showHidden, setShowHidden] = useState(false);
+  function hideNote(id: string, hide: boolean) {
+    const next = hide ? [...hidden, id] : hidden.filter((x) => x !== id);
+    setHidden(next);
+    try {
+      localStorage.setItem(hideKey, JSON.stringify(next.slice(-200)));
+    } catch {
+      /* private mode: hides until reload */
+    }
+  }
   const [openTask, setOpenTask] = useState<string | null>(null);
 
   const anchor = settings.items[0]?.biweeklyAnchor ?? today;
@@ -85,7 +104,12 @@ export default function Today() {
         </div>
         {composing && <NoteComposer date={today} onDone={() => setComposing(false)} />}
         {sortedNotes.length === 0 && !composing && <p className="muted empty">אין הערות להיום.</p>}
-        {sortedNotes.map((n) => {
+        {sortedNotes.filter((n) => hidden.includes(n.id)).length > 0 && (
+          <button type="button" className="small" onClick={() => setShowHidden(!showHidden)}>
+            {showHidden ? 'הסתר שוב את המוסתרות' : `הצג ${sortedNotes.filter((n) => hidden.includes(n.id)).length} הערות מוסתרות`}
+          </button>
+        )}
+        {sortedNotes.filter((n) => showHidden || !hidden.includes(n.id)).map((n) => {
           const seenBy = acks.items.filter((a) => a.noteId === n.id);
           const iSaw = seenBy.some((a) => a.employeeId === user.id);
           const missing = employees.filter((e) => !seenBy.some((a) => a.employeeId === e.id));
@@ -101,7 +125,12 @@ export default function Today() {
               <p className="note-text">{n.text}</p>
               <div className="note-foot">
                 {iSaw ? (
-                  <span className="ok">✓ ראיתי</span>
+                  <>
+                    <span className="ok">✓ ראיתי</span>
+                    <button type="button" className="small" onClick={() => hideNote(n.id, !hidden.includes(n.id))}>
+                      {hidden.includes(n.id) ? 'בטל הסתרה' : 'הסתר'}
+                    </button>
+                  </>
                 ) : (
                   <button type="button" className="primary small" onClick={() => void ackNote(n)}>
                     ראיתי ✓
@@ -120,6 +149,11 @@ export default function Today() {
       </section>
 
       <ReservationsSummary date={today} />
+
+      <Link to="/tips" className="card summary-line">
+        <span>💰 <strong>טיפים</strong> - הוספת סכום בסוף משמרת והחלק שלי</span>
+        <span className="muted">←</span>
+      </Link>
 
       <section>
         <h2>✅ נהלי פתיחה וסגירה</h2>

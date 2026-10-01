@@ -144,6 +144,8 @@ export interface Game extends Doc {
   durationMin?: number;
   notes?: string;
   featured?: boolean; // "must know" - ranked higher in recommendations
+  /** Shelf number (free text, e.g. "12" or "B3") - empty = not set */
+  shelf?: string;
 }
 
 export interface Settings extends Doc {
@@ -211,4 +213,30 @@ export interface InventoryPhoto extends Doc {
   dataUrl: string;
   by: string;
   at: string;
+}
+
+// ---------- tips ----------
+
+/** One amount somebody put in at the end of a shift. id = `${date}|${uuid}` */
+export interface TipEntry extends Doc {
+  date: string;
+  amount: number;
+  by: string;
+  at: string;
+}
+
+/** Somebody who worked on that business day (and shares the day's tips). id = `${date}|${employeeId}` */
+export interface TipWorkerDoc extends Doc {
+  date: string;
+  employeeId: string;
+  /** reinforcement worker: share = hours / full shift */
+  reinforcement?: boolean;
+  hours?: number;
+  by: string;
+  at: string;
+}
+
+/** What a Wix table id means in the cafe (Wix does not give names through its API). */
+export interface WixTable extends Doc {
+  label: string;
 }

@@ -13,6 +13,8 @@ export interface Reservation {
   notes: string[];
   /** What the staff wrote under "Team notes" in Wix. */
   teamMessage: string;
+  /** Wix table ids (see the table-number mapping in the Wix admin screen). */
+  tableIds: string[];
 }
 
 export interface WixDebug {

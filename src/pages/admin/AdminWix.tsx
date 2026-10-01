@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { diagnoseFunction, fetchReservations } from '../../lib/wix';
 import type { FunctionDiagnosis, WixState } from '../../lib/wix';
 import { useBusinessDate } from '../../lib/useBusinessDate';
+import { useCollection } from '../../lib/db';
+import { addDays } from '../../lib/dates';
+import type { WixTable } from '../../lib/types';
+import type { Reservation } from '../../lib/wix';
 
 const UNREACHABLE: Record<FunctionDiagnosis, string> = {
   missing:
@@ -75,6 +79,75 @@ export default function AdminWix() {
           )}
         </div>
       )}
+      <TableNames today={today} />
     </>
+  );
+}
+
+/**
+ * Wix gives each table only an id (no number). A manager names each table once, using the
+ * reservations that sit at it (time + name) to recognise it.
+ */
+function TableNames({ today }: { today: string }) {
+  const tables = useCollection<WixTable>('wixTables');
+  const [seen, setSeen] = useState<Reservation[]>([]);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const days = [today, addDays(today, 1), addDays(today, 2)];
+      const all: Reservation[] = [];
+      for (const d of days) {
+        const r = await fetchReservations(d);
+        if (r.state === 'ok') all.push(...r.reservations.map((x) => ({ ...x, time: `${d.slice(8)}/${d.slice(5, 7)} ${x.time}` })));
+      }
+      if (alive) {
+        setSeen(all);
+        setReady(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [today]);
+
+  const ids = [...new Set(seen.flatMap((r) => r.tableIds ?? []))];
+  const label = (id: string) => tables.items.find((t) => t.id === id)?.label ?? '';
+  const save = (id: string, value: string) => {
+    const v = value.trim();
+    if (v === label(id)) return;
+    if (v) void tables.save({ id, label: v });
+    else void tables.remove(id);
+  };
+
+  return (
+    <section>
+      <h2>🪑 מספרי שולחנות</h2>
+      <p className="muted small-text">
+        Wix לא מעבירה שמות או מספרים של שולחנות, רק מזהה. כתבו כאן פעם אחת את המספר של כל שולחן. כדי לזהות אותו מופיעות ההזמנות שיושבות בו.
+      </p>
+      {!ready && <p className="muted">בודק הזמנות קרובות…</p>}
+      {ready && ids.length === 0 && (
+        <p className="muted small-text">אין כרגע הזמנות עם שולחן משויך (היום ובימים הקרובים). ברגע ש-Wix משייכת שולחן להזמנה הוא יופיע כאן.</p>
+      )}
+      <div className="stack">
+        {ids.map((id) => (
+          <div key={id} className="card form">
+            <span className="muted small-text">
+              {seen
+                .filter((r) => r.tableIds?.includes(id))
+                .slice(0, 3)
+                .map((r) => `${r.time} ${r.firstName || '?'} (${r.partySize})`)
+                .join(' · ')}
+            </span>
+            <label>
+              מספר שולחן
+              <input key={`${id}-${label(id)}`} defaultValue={label(id)} placeholder="למשל: 7" onBlur={(e) => save(id, e.target.value)} />
+            </label>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
