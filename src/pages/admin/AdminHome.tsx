@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
+import { t, tn } from '../../lib/i18n';
 
 const ITEMS = [
-  ['/admin/notes', '📣', 'הערות למשמרת', 'כתיבת הוראות לצוות של היום או של מחר'],
-  ['/admin/employees', '👥', 'עובדים', 'הוספה, מחיקה, הרשאות ואיפוס קוד'],
-  ['/admin/checklists', '✅', 'נהלי פתיחה וסגירה', 'עריכת הסעיפים בצ\'קליסטים'],
-  ['/admin/tasks', '🧹', 'משימות ניקיון', 'ימים, תדירות והסברים לעובדים'],
-  ['/admin/inventory', '📦', 'מלאי', 'פריטים, קטגוריות, ימי בדיקה וסדר ברשימה'],
-  ['/admin/wix', '🔌', 'חיבור Wix', 'בדיקה שההזמנות נטענות והערות הלקוחות מופיעות'],
+  ['/admin/notes', '📣', tn('הערות למשמרת'), tn('כתיבת הוראות לצוות של היום או של מחר')],
+  ['/admin/employees', '👥', tn('עובדים'), tn('הוספה, מחיקה, הרשאות ואיפוס קוד')],
+  ['/admin/checklists', '✅', tn('נהלי פתיחה וסגירה'), tn("עריכת הסעיפים בצ'קליסטים")],
+  ['/admin/tasks', '🧹', tn('משימות ניקיון'), tn('ימים, תדירות והסברים לעובדים')],
+  ['/admin/inventory', '📦', tn('מלאי'), tn('פריטים, קטגוריות, ימי בדיקה וסדר ברשימה')],
+  ['/admin/wix', '🔌', tn('חיבור Wix'), tn('בדיקה שההזמנות נטענות והערות הלקוחות מופיעות')],
 ] as const;
 
 export default function AdminHome() {
@@ -15,20 +16,20 @@ export default function AdminHome() {
   const items = isManager ? ITEMS : ITEMS.filter(([to]) => to === '/admin/inventory');
   return (
     <>
-      <h1>⚙️ ניהול</h1>
+      <h1>{t('⚙️ ניהול')}</h1>
       <div className="stack">
         {items.map(([to, ico, title, desc]) => (
           <Link key={to} to={to} className="card tile row-tile">
             <span className="big-ico">{ico}</span>
             <span>
-              <strong>{title}</strong>
-              <span className="muted small-text block">{desc}</span>
+              <strong>{t(title)}</strong>
+              <span className="muted small-text block">{t(desc)}</span>
             </span>
           </Link>
         ))}
         {isManager && (
         <p className="muted small-text">
-          עריכת נהלים ומשחקים נעשית ישירות מהלשוניות "נהלים" ו"משחקים" (כפתור העריכה מופיע רק למנהלים).
+          {t('עריכת נהלים ומשחקים נעשית ישירות מהלשוניות "נהלים" ו"משחקים" (כפתור העריכה מופיע רק למנהלים).')}
         </p>
         )}
       </div>

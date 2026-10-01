@@ -4,11 +4,12 @@ import { useAuth } from '../lib/auth';
 import { backend, useCollection } from '../lib/db';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { WEEKDAY_NAMES, addDays, formatLongDate, weekdayOf } from '../lib/dates';
-import { categoriesOf, formatRestockList, isDueOn, itemsOfCategory, latestReports, levelOf, restockList } from '../lib/inventory';
+import { catLabel, categoriesOf, formatRestockList, isDueOn, itemsOfCategory, latestReports, levelOf, restockList } from '../lib/inventory';
 import { shrinkImage } from '../lib/image';
 import { LEVEL_LABEL } from '../lib/types';
 import type { InventoryItem, InventoryPhoto, InventoryReport, StockLevel } from '../lib/types';
 import { seedInventory } from '../seed/inventory';
+import { t, tl } from '../lib/i18n';
 
 const LEVELS: StockLevel[] = ['ok', 'low', 'out'];
 
@@ -39,7 +40,7 @@ export default function InventoryPage() {
       await reports.save(next);
       setError('');
     } catch {
-      setError('השמירה נכשלה - בדקו חיבור ונסו שוב');
+      setError(t('השמירה נכשלה - בדקו חיבור ונסו שוב'));
     }
   }
 
@@ -50,7 +51,7 @@ export default function InventoryPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      window.prompt('העתיקו את הרשימה:', text);
+      window.prompt(t('העתיקו את הרשימה:'), text);
     }
   }
 
@@ -58,47 +59,47 @@ export default function InventoryPage() {
 
   return (
     <>
-      <h1>📦 מלאי</h1>
+      <h1>{t('📦 מלאי')}</h1>
       {error && <p className="banner-warn" role="alert">{error}</p>}
 
       {items.loading ? (
-        <p className="muted">טוען…</p>
+        <p className="muted">{t('טוען…')}</p>
       ) : items.items.length === 0 ? (
         <div className="card">
-          <p>עדיין אין פריטי מלאי.</p>
+          <p>{t('עדיין אין פריטי מלאי.')}</p>
           <p className="muted small-text">
             {canEditInventory ? (
-              <>אפשר להוסיף פריטים ב<Link to="/admin/inventory">ניהול מלאי</Link>. (הרשימה ההתחלתית נטענת כשמנהל נכנס למערכת.)</>
+              <>{t('אפשר להוסיף פריטים ב')}<Link to="/admin/inventory">{t('ניהול מלאי')}</Link>{t('. (הרשימה ההתחלתית נטענת כשמנהל נכנס למערכת.)')}</>
             ) : (
-              'מנהל צריך להיכנס למערכת פעם אחת כדי לטעון את הרשימה ההתחלתית.'
+              t('מנהל צריך להיכנס למערכת פעם אחת כדי לטעון את הרשימה ההתחלתית.')
             )}
           </p>
         </div>
       ) : (
         <>
-          <section className="card" aria-label="רשימת קניות">
+          <section className="card" aria-label={t('רשימת קניות')}>
             <div className="section-head">
-              <h2>🛒 חסר ({lines.length})</h2>
+              <h2>{t('🛒 חסר (')}{lines.length})</h2>
               {lines.length > 0 && (
                 <button type="button" className="small" onClick={() => void copyList()}>
-                  {copied ? 'הועתק ✓' : 'העתק לוואטסאפ'}
+                  {copied ? t('הועתק ✓') : t('העתק לוואטסאפ')}
                 </button>
               )}
             </div>
-            {lines.length === 0 && <p className="muted">אין חוסרים כרגע 🎉</p>}
+            {lines.length === 0 && <p className="muted">{t('אין חוסרים כרגע 🎉')}</p>}
             {lines.map((l) => (
               <div key={l.item.id} className="li emp">
                 <span className="li-body">
-                  <strong>{l.item.name}</strong>
+                  <strong>{tl(l.item.name, l.item.nameEn)}</strong>
                   <span className="muted small-text block">
-                    {l.item.category} · {l.item.mode === 'count' && l.report.count !== undefined ? `${l.report.count}${l.item.unit ? ` ${l.item.unit}` : ''}` : LEVEL_LABEL[l.level]}
-                    {l.ageDays > 0 ? ` · לפני ${l.ageDays} ימים` : ' · היום'}
+                    {catLabel(items.items, l.item.category)} · {l.item.mode === 'count' && l.report.count !== undefined ? `${l.report.count}${l.item.unit ? ` ${tl(l.item.unit, l.item.unitEn)}` : ''}` : t(LEVEL_LABEL[l.level])}
+                    {l.ageDays > 0 ? t(' · לפני {ageDays} ימים', { ageDays: l.ageDays }) : t(' · היום')}
                   </span>
                 </span>
-                <span className={`chip ${l.level === 'out' ? 'red' : ''}`}>{LEVEL_LABEL[l.level]}</span>
+                <span className={`chip ${l.level === 'out' ? 'red' : ''}`}>{t(LEVEL_LABEL[l.level])}</span>
                 {canEditInventory && (
                   <button type="button" className="small" onClick={() => void write(l.item, { restocked: true, level: 'ok', count: undefined })}>
-                    נקנה ✓
+                    {t('נקנה ✓')}
                   </button>
                 )}
               </div>
@@ -107,17 +108,17 @@ export default function InventoryPage() {
 
           <div className="section-head">
             <h2>
-              {showAll ? 'כל הפריטים' : `לבדיקה היום (יום ${WEEKDAY_NAMES[weekday]})`}
+              {showAll ? t('כל הפריטים') : t('לבדיקה היום (יום {p1})', { p1: t(WEEKDAY_NAMES[weekday]) })}
               {!showAll && due.length > 0 && <span className="muted small-text"> · {doneCount}/{due.length}</span>}
             </h2>
             <button type="button" className="small" onClick={() => setShowAll(!showAll)}>
-              {showAll ? 'רק של היום' : 'הצג הכול'}
+              {showAll ? t('רק של היום') : t('הצג הכול')}
             </button>
           </div>
-          {shown.length === 0 && <p className="muted">אין פריטים לבדיקה היום.</p>}
+          {shown.length === 0 && <p className="muted">{t('אין פריטים לבדיקה היום.')}</p>}
           {categories.map((cat) => (
             <section key={cat}>
-              <h3 className="cat">{cat}</h3>
+              <h3 className="cat">{catLabel(items.items, cat)}</h3>
               <div className="card list">
                 {itemsOfCategory(shown, cat).map((item) => (
                   <ItemRow key={item.id} item={item} report={todays.get(item.id)} today={today} write={write} />
@@ -180,7 +181,7 @@ function ItemRow({
       setShowPic(true);
       await write(item, { photo: true });
     } catch {
-      alert('לא הצלחנו לשמור את התמונה. נסו שוב.');
+      alert(t('לא הצלחנו לשמור את התמונה. נסו שוב.'));
     } finally {
       setBusy(false);
     }
@@ -199,13 +200,13 @@ function ItemRow({
     <div className="li inv">
       <span className="li-body">
         <span className="inv-name">
-          <strong>{item.name}</strong>
-          {level && level !== 'ok' && <span className={`chip ${level === 'out' ? 'red' : ''}`}>{LEVEL_LABEL[level]}</span>}
+          <strong>{tl(item.name, item.nameEn)}</strong>
+          {level && level !== 'ok' && <span className={`chip ${level === 'out' ? 'red' : ''}`}>{t(LEVEL_LABEL[level])}</span>}
         </span>
-        {item.hint && <span className="muted small-text">{item.hint}</span>}
+        {item.hint && <span className="muted small-text">{tl(item.hint, item.hintEn)}</span>}
 
         {item.mode === 'status' && (
-          <span className="seg inv-seg" role="group" aria-label={`מצב ${item.name}`}>
+          <span className="seg inv-seg" role="group" aria-label={t('מצב {name}', { name: tl(item.name, item.nameEn) })}>
             {LEVELS.map((lv) => (
               <button
                 key={lv}
@@ -213,7 +214,7 @@ function ItemRow({
                 className={report && !report.restocked && report.level === lv ? 'on' : report?.restocked && lv === 'ok' ? 'on' : ''}
                 onClick={() => void write(item, { level: lv, restocked: false })}
               >
-                {LEVEL_LABEL[lv]}
+                {t(LEVEL_LABEL[lv])}
               </button>
             ))}
           </span>
@@ -221,11 +222,11 @@ function ItemRow({
 
         {item.mode === 'count' && (
           <span className="stepper">
-            <button type="button" aria-label="פחות" onClick={() => setCountSoon((count ?? 0) - 1)}>−</button>
+            <button type="button" aria-label={t('פחות')} onClick={() => setCountSoon((count ?? 0) - 1)}>−</button>
             <output>{count ?? '–'}</output>
-            <button type="button" aria-label="יותר" onClick={() => setCountSoon((count ?? 0) + 1)}>+</button>
-            {item.unit && <span className="muted">{item.unit}</span>}
-            {item.min !== undefined && item.min > 0 && <span className="muted small-text">(מעט: עד {item.min})</span>}
+            <button type="button" aria-label={t('יותר')} onClick={() => setCountSoon((count ?? 0) + 1)}>+</button>
+            {item.unit && <span className="muted">{tl(item.unit, item.unitEn)}</span>}
+            {item.min !== undefined && item.min > 0 && <span className="muted small-text">{t('(מעט: עד')}{' '}{item.min})</span>}
           </span>
         )}
 
@@ -233,31 +234,31 @@ function ItemRow({
           {(item.mode === 'photo' || item.photo) && (
             <>
               <button type="button" className="small" disabled={busy} onClick={() => fileRef.current?.click()}>
-                {busy ? 'שומר…' : report?.photo ? '📷 צלם שוב' : '📷 צלם'}
+                {busy ? t('שומר…') : report?.photo ? t('📷 צלם שוב') : t('📷 צלם')}
               </button>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { void onPhoto(e.target.files?.[0]); e.target.value = ''; }} />
               {report?.photo && (
                 <button type="button" className="small" onClick={() => void togglePic()}>
-                  {showPic ? 'הסתר תמונה' : 'הצג תמונה'}
+                  {showPic ? t('הסתר תמונה') : t('הצג תמונה')}
                 </button>
               )}
             </>
           )}
           <button type="button" className="small" onClick={() => setNoteOpen(!noteOpen)}>
-            {report?.note ? '📝 הערה' : '+ הערה'}
+            {report?.note ? t('📝 הערה') : t('+ הערה')}
           </button>
         </span>
         {noteOpen && (
           <input
             className="inv-note"
             value={note}
-            placeholder="למשל: נשארו שני בקבוקים פתוחים"
+            placeholder={t('למשל: נשארו שני בקבוקים פתוחים')}
             onChange={(e) => setNote(e.target.value)}
             onBlur={() => note !== (report?.note ?? '') && void write(item, { note: note.trim() || undefined })}
           />
         )}
         {!noteOpen && report?.note && <span className="muted small-text">📝 {report.note}</span>}
-        {showPic && (picture ? <img className="inv-pic" src={picture} alt={item.name} /> : <span className="muted small-text">טוען תמונה…</span>)}
+        {showPic && (picture ? <img className="inv-pic" src={picture} alt={item.name} /> : <span className="muted small-text">{t('טוען תמונה…')}</span>)}
       </span>
     </div>
   );

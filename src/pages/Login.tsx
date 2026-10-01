@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
-import { Logo } from '../components/Layout';
+import { LangSwitch, Logo } from '../components/Layout';
+import { t } from '../lib/i18n';
 
 export function PinPad({ onSubmit, disabled }: { onSubmit(pin: string): void; disabled?: boolean }) {
   const [pin, setPin] = useState('');
@@ -15,7 +16,7 @@ export function PinPad({ onSubmit, disabled }: { onSubmit(pin: string): void; di
   };
   return (
     <div className="pinpad">
-      <div className="dots" aria-label={`הוזנו ${pin.length} ספרות`}>
+      <div className="dots" aria-label={t('הוזנו {length} ספרות', { length: pin.length })}>
         {[0, 1, 2, 3].map((i) => (
           <span key={i} className={i < pin.length ? 'on' : ''} />
         ))}
@@ -26,13 +27,13 @@ export function PinPad({ onSubmit, disabled }: { onSubmit(pin: string): void; di
             {d}
           </button>
         ))}
-        <button type="button" className="ghost" onClick={() => setPin('')} aria-label="נקה">
+        <button type="button" className="ghost" onClick={() => setPin('')} aria-label={t('נקה')}>
           ✕
         </button>
         <button type="button" onClick={() => press('0')}>
           0
         </button>
-        <button type="button" className="ghost" onClick={() => setPin((p) => p.slice(0, -1))} aria-label="מחק ספרה">
+        <button type="button" className="ghost" onClick={() => setPin((p) => p.slice(0, -1))} aria-label={t('מחק ספרה')}>
           ⌫
         </button>
       </div>
@@ -56,20 +57,21 @@ export default function Login() {
     if (r.ok) return;
     if (r.reason === 'locked') {
       const min = Math.max(1, Math.ceil((r.retryAfterSeconds ?? 300) / 60));
-      setError(`יותר מדי ניסיונות. נסו שוב בעוד ${min} דקות`);
-    } else if (r.reason === 'error') setError('אין חיבור לשרת, נסו שוב');
-    else setError('הקוד שגוי, נסו שוב');
+      setError(t('יותר מדי ניסיונות. נסו שוב בעוד {min} דקות', { min }));
+    } else if (r.reason === 'error') setError(t('אין חיבור לשרת, נסו שוב'));
+    else setError(t('הקוד שגוי, נסו שוב'));
   }
 
   return (
     <div className="login">
+      <LangSwitch />
       <Logo size={96} className="logo-big" />
-      <h1>דריקס OS</h1>
+      <h1>{t('דריקס OS')}</h1>
       {!ready ? (
-        <p className="muted">טוען…</p>
+        <p className="muted">{t('טוען…')}</p>
       ) : !person ? (
         <>
-          <p className="muted">מי עובד היום?</p>
+          <p className="muted">{t('מי עובד היום?')}</p>
           <div className="people">
             {sorted.map((e) => (
               <button key={e.id} type="button" onClick={() => { setSelected(e.id); setError(''); }}>
@@ -81,11 +83,11 @@ export default function Login() {
         </>
       ) : (
         <>
-          <p className="who">שלום {person.name}, הזינו קוד</p>
+          <p className="who">{t('שלום')}{' '}{person.name}{t(', הזינו קוד')}</p>
           <PinPad onSubmit={submit} />
           <p className="error" role="alert">{error}</p>
           <button type="button" className="link" onClick={() => setSelected(null)}>
-            ← לא אני
+            {t('← לא אני')}
           </button>
         </>
       )}

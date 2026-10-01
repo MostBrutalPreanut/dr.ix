@@ -19,6 +19,7 @@ import AdminInventory from './pages/admin/AdminInventory';
 import InventoryPage from './pages/InventoryPage';
 import TipsPage from './pages/TipsPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LangProvider } from './lib/i18n';
 
 function Gate() {
   const { user, isManager, canEditInventory } = useAuth();
@@ -57,12 +58,21 @@ function Gate() {
   );
 }
 
+function LangGate() {
+  const { user } = useAuth();
+  return (
+    <LangProvider userId={user?.id ?? null}>
+      <Gate />
+    </LangProvider>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary resetKey="app">
       <HashRouter>
         <AuthProvider>
-          <Gate />
+          <LangGate />
         </AuthProvider>
       </HashRouter>
     </ErrorBoundary>

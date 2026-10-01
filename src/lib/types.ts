@@ -42,6 +42,8 @@ export interface Note extends Doc {
   urgent: boolean;
   createdBy: string; // employee id
   createdAt: string;
+  /** optional English version of the text */
+  textEn?: string;
 }
 
 /** A colleague confirmed they read a note. id = `${date}|${noteId}|${employeeId}` */
@@ -56,16 +58,20 @@ export interface ChecklistItem {
   id: string;
   text: string;
   detail?: string;
+  textEn?: string;
+  detailEn?: string;
 }
 
 export interface ChecklistGroup {
   id: string;
   title: string;
+  titleEn?: string;
   items: ChecklistItem[];
 }
 
 export interface Checklist extends Doc {
   title: string;
+  titleEn?: string;
   icon: string;
   order: number;
   groups: ChecklistGroup[];
@@ -95,6 +101,9 @@ export interface ChecklistClosure extends Doc {
 export interface Task extends Doc {
   title: string;
   description: string;
+  /** optional English version, shown when the app is in English */
+  titleEn?: string;
+  descriptionEn?: string;
   weekday: number; // 0 = Sunday ... 6 = Saturday
   everyNWeeks: 1 | 2;
   weekOffset: 0 | 1; // which week of the cycle (only for everyNWeeks = 2)
@@ -146,6 +155,8 @@ export interface Game extends Doc {
   featured?: boolean; // "must know" - ranked higher in recommendations
   /** Shelf number (free text, e.g. "12" or "B3") - empty = not set */
   shelf?: string;
+  nameEn?: string;
+  notesEn?: string;
 }
 
 export interface Settings extends Doc {
@@ -177,6 +188,11 @@ export interface InventoryItem extends Doc {
   name: string;
   category: string;
   mode: InventoryMode;
+  /** optional English versions, shown when the app is in English */
+  nameEn?: string;
+  categoryEn?: string;
+  hintEn?: string;
+  unitEn?: string;
   /** count mode: what is counted ("crates", "bags") */
   unit?: string;
   /** count mode: at or below this amount the item counts as low (0 is always "out") */
@@ -236,7 +252,3 @@ export interface TipWorkerDoc extends Doc {
   at: string;
 }
 
-/** What a Wix table id means in the cafe (Wix does not give names through its API). */
-export interface WixTable extends Doc {
-  label: string;
-}

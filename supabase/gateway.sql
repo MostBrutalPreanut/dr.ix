@@ -74,8 +74,7 @@ insert into public.acl (collection, read_role, write_role) values
   ('inventoryReports', 'any',    'any'),
   ('inventoryPhotos',  'any',    'any'),
   ('tipEntries',       'manager', 'any'),
-  ('tipWorkers',       'any',    'any'),
-  ('wixTables',        'any',    'manager')
+  ('tipWorkers',       'any',    'any')
 on conflict (collection) do nothing;
 -- tip amounts are for managers only (employees may add, never read) - also fixes an earlier install
 update public.acl set read_role = 'manager' where collection = 'tipEntries';

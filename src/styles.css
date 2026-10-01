@@ -1033,3 +1033,79 @@ button.linklike {
   background: none;
   font-weight: 400;
 }
+
+/* language switch */
+.lang-switch {
+  white-space: nowrap;
+}
+.login .lang-switch {
+  align-self: flex-end;
+}
+.topbar .lang-switch {
+  margin-inline-start: auto;
+  margin-inline-end: 0.5rem;
+}
+
+/* the handbook chapters are written in Hebrew whatever the app language is */
+.md {
+  direction: rtl;
+}
+/* free text typed by the staff is aligned by its own language */
+.note-text,
+.res-note,
+input,
+textarea {
+  unicode-bidi: plaintext;
+}
+.seg button {
+  white-space: normal;
+  min-width: 0;
+  line-height: 1.2;
+  padding-inline: 0.4rem;
+}
+
+/* "how many guests" and "age of the youngest" side by side */
+.guests-age {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 1.25rem;
+}
+.guests-age > * {
+  min-width: 0;
+}
+.guests-age .label {
+  margin-bottom: 0.25rem;
+}
+.guests-age input.age {
+  width: 6rem;
+}
+
+a.stock-task {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.guests-age > label {
+  flex: 1 1 6.5rem;
+}
+.guests-age > div {
+  flex: none;
+}
+.guests-age input.age {
+  width: 100%;
+  max-width: 7rem;
+}
+.guests-age {
+  gap: 0.5rem 0.9rem;
+}
+.guests-age .stepper {
+  gap: 0.4rem;
+}
+.guests-age .stepper button {
+  width: 40px;
+  min-height: 40px;
+}
+.guests-age > label {
+  flex-basis: 5.5rem;
+}

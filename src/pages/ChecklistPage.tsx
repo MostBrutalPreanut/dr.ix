@@ -5,6 +5,7 @@ import { useBusinessDate } from '../lib/useBusinessDate';
 import { formatLongDate, formatTime } from '../lib/dates';
 import type { Checklist, ChecklistCheck, ChecklistClosure } from '../lib/types';
 import { seedChecklists } from '../seed/checklists';
+import { t, tl } from '../lib/i18n';
 
 export default function ChecklistPage() {
   const { id = '' } = useParams();
@@ -17,8 +18,8 @@ export default function ChecklistPage() {
   const closures = useCollection<ChecklistClosure>('closures', undefined, idPrefix(today));
 
   const list = lists.items.find((l) => l.id === id);
-  if (lists.loading) return <p className="muted">טוען…</p>;
-  if (!list || !user) return <p>הרשימה לא נמצאה. <Link to="/">חזרה</Link></p>;
+  if (lists.loading) return <p className="muted">{t('טוען…')}</p>;
+  if (!list || !user) return <p>{t('הרשימה לא נמצאה.')}{' '}<Link to="/">{t('חזרה')}</Link></p>;
 
   const checkId = (itemId: string) => `${today}|${list.id}|${itemId}`;
   const mine = checks.items.filter((c) => c.checklistId === list.id);
@@ -46,7 +47,7 @@ export default function ChecklistPage() {
   async function markAll() {
     const missing = allItems.filter((i) => !byItem.has(i.id));
     if (missing.length === 0) return;
-    if (!confirm(`בטוחים שתרצו לסמן הכל? יסומנו עוד ${missing.length} סעיפים בשמכם.`)) return;
+    if (!confirm(t('בטוחים שתרצו לסמן הכל? יסומנו עוד {length} סעיפים בשמכם.', { length: missing.length }))) return;
     const at = new Date().toISOString();
     const doc = (itemId: string): ChecklistCheck => ({ id: checkId(itemId), date: today, checklistId: list!.id, itemId, by: user!.id, at });
     const last = missing[missing.length - 1];
@@ -66,30 +67,30 @@ export default function ChecklistPage() {
 
   return (
     <>
-      <Link to="/" className="back">← חזרה להיום</Link>
+      <Link to="/" className="back">{t('← חזרה להיום')}</Link>
       <h1>
-        {list.icon} {list.title}
+        {list.icon} {tl(list.title, list.titleEn)}
       </h1>
       <p className="muted">{formatLongDate(today)}</p>
       <div className="bar big">
         <div style={{ width: `${allItems.length ? (done / allItems.length) * 100 : 0}%` }} />
       </div>
       <p className="muted small-text">
-        {done}/{allItems.length} הושלמו
+        {done}/{allItems.length}{' '}{t('הושלמו')}
       </p>
 
       {!closure && !complete && (
         <button type="button" className="small" onClick={() => void markAll()}>
-          ✓ סמן הכל
+          {t('✓ סמן הכל')}
         </button>
       )}
 
       {closure && (
         <div className="card success">
-          ✓ הרשימה נסגרה ע"י {nameOf(closure.by)} ב-{formatTime(closure.at)}
+          {t('✓ הרשימה נסגרה ע"י {name} ב-{time}', { name: nameOf(closure.by), time: formatTime(closure.at) })}
           {(isManager || closure.by === user.id) && (
             <button type="button" className="small" onClick={() => void closures.remove(closure.id)}>
-              פתח מחדש
+              {t('פתח מחדש')}
             </button>
           )}
         </div>
@@ -100,7 +101,7 @@ export default function ChecklistPage() {
         return (
           <section key={g.id}>
             <div className="section-head">
-              <h2>{g.title}</h2>
+              <h2>{tl(g.title, g.titleEn)}</h2>
               <span className="muted small-text">
                 {gDone}/{g.items.length}
               </span>
@@ -119,8 +120,8 @@ export default function ChecklistPage() {
                   >
                     <span className={`check${c ? ' on' : ''}`}>{c ? '✓' : ''}</span>
                     <span className="li-body">
-                      <span className="li-text">{item.text}</span>
-                      {item.detail && <span className="li-detail">{item.detail}</span>}
+                      <span className="li-text">{tl(item.text, item.textEn)}</span>
+                      {item.detail && <span className="li-detail">{tl(item.detail, item.detailEn)}</span>}
                       {c && (
                         <span className="muted small-text">
                           {nameOf(c.by)} · {formatTime(c.at)}
@@ -137,7 +138,7 @@ export default function ChecklistPage() {
 
       {!closure && (
         <button type="button" className="primary wide" disabled={!complete} onClick={() => void close()}>
-          {complete ? 'סיימתי, סגור את הרשימה' : `נשארו ${allItems.length - done} סעיפים`}
+          {complete ? t('סיימתי, סגור את הרשימה') : t('נשארו {done} סעיפים', { done: allItems.length - done })}
         </button>
       )}
     </>

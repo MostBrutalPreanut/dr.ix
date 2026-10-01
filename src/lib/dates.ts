@@ -3,6 +3,11 @@ const TZ = 'Asia/Jerusalem';
 /** Shifts end after midnight - until this hour the "business day" is still yesterday. */
 const BUSINESS_DAY_CUTOFF_HOUR = 5;
 
+let locale = 'he-IL';
+export function setDateLocale(l: string): void {
+  locale = l;
+}
+
 export const WEEKDAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
 function pad(n: number): string {
@@ -58,7 +63,7 @@ export function weekIndex(key: string, anchor: string): number {
 }
 
 export function formatLongDate(key: string): string {
-  return new Intl.DateTimeFormat('he-IL', {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: 'UTC',
     weekday: 'long',
     day: 'numeric',
@@ -67,7 +72,7 @@ export function formatLongDate(key: string): string {
 }
 
 export function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat('he-IL', {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: TZ,
     hour: '2-digit',
     minute: '2-digit',

@@ -4,12 +4,13 @@ import { useAuth } from '../../lib/auth';
 import { DEFAULT_PIN } from '../../lib/pin';
 import type { ActionResult } from '../../lib/employeesApi';
 import type { Role } from '../../lib/types';
+import { t, tn } from '../../lib/i18n';
 
 const REASON: Record<string, string> = {
-  duplicate_name: 'כבר יש עובד בשם הזה',
-  last_manager: 'חייב להישאר לפחות מנהל אחד',
-  self: 'אי אפשר למחוק את עצמך',
-  invalid: 'הפרטים לא תקינים',
+  duplicate_name: tn('כבר יש עובד בשם הזה'),
+  last_manager: tn('חייב להישאר לפחות מנהל אחד'),
+  self: tn('אי אפשר למחוק את עצמך'),
+  invalid: tn('הפרטים לא תקינים'),
 };
 
 export default function AdminEmployees() {
@@ -24,10 +25,10 @@ export default function AdminEmployees() {
   async function run(action: Promise<ActionResult>, success = ''): Promise<boolean> {
     try {
       const r = await action;
-      setMsg(r.ok ? success : (REASON[r.reason] ?? 'הפעולה נכשלה'));
+      setMsg(r.ok ? success : (REASON[r.reason] ?? t('הפעולה נכשלה')));
       return r.ok;
     } catch {
-      setMsg('אין חיבור לשרת או שאין הרשאה');
+      setMsg(t('אין חיבור לשרת או שאין הרשאה'));
       return false;
     }
   }
@@ -36,30 +37,30 @@ export default function AdminEmployees() {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) return;
-    if (await run(addEmployee(trimmed, role), `${trimmed} נוסף/ה. הקוד ההתחלתי: ${DEFAULT_PIN}`)) setName('');
+    if (await run(addEmployee(trimmed, role), t('{trimmed} נוסף/ה. הקוד ההתחלתי: {DEFAULT_PIN}', { trimmed, DEFAULT_PIN }))) setName('');
   }
 
   return (
     <>
-      <Link to="/admin" className="back">← ניהול</Link>
-      <h1>👥 עובדים ({employees.length})</h1>
+      <Link to="/admin" className="back">{t('← ניהול')}</Link>
+      <h1>{t('👥 עובדים (')}{employees.length})</h1>
 
       <form className="card form" onSubmit={(e) => void add(e)}>
         <div className="row">
           <label style={{ flex: 1 }}>
-            שם
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם העובד/ת" />
+            {t('שם')}
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('שם העובד/ת')} />
           </label>
           <label>
-            תפקיד
+            {t('תפקיד')}
             <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
-              <option value="staff">עובד</option>
-              <option value="manager">מנהל</option>
+              <option value="staff">{t('עובד')}</option>
+              <option value="manager">{t('מנהל')}</option>
             </select>
           </label>
         </div>
         <button type="submit" className="primary" disabled={!name.trim()}>
-          + הוסף עובד
+          {t('+ הוסף עובד')}
         </button>
       </form>
       {msg && <p className="muted" role="status">{msg}</p>}
@@ -74,11 +75,11 @@ export default function AdminEmployees() {
               <div key={e.id} className="li emp">
                 <span className="avatar">{e.name.slice(0, 1)}</span>
                 <span className="li-body">
-                  <strong>{e.name}</strong> {isMe && <span className="muted small-text">(אני)</span>}
+                  <strong>{e.name}</strong> {isMe && <span className="muted small-text">{t('(אני)')}</span>}
                   <span className="muted small-text block">
-                    {e.role === 'manager' ? 'מנהל' : 'עובד'}
-                    {e.role === 'staff' && e.inventoryEditor && ' · עורך/ת מלאי'}
-                    {e.mustChangePin && ' · עוד לא בחר/ה קוד אישי'}
+                    {e.role === 'manager' ? t('מנהל') : t('עובד')}
+                    {e.role === 'staff' && e.inventoryEditor && t(' · עורך/ת מלאי')}
+                    {e.mustChangePin && t(' · עוד לא בחר/ה קוד אישי')}
                   </span>
                 </span>
                 <span className="row actions">
@@ -86,10 +87,10 @@ export default function AdminEmployees() {
                     type="button"
                     className="small"
                     disabled={lastManager}
-                    title={lastManager ? 'חייב להישאר לפחות מנהל אחד' : ''}
+                    title={lastManager ? t('חייב להישאר לפחות מנהל אחד') : ''}
                     onClick={() => void run(changeRole(e.id, e.role === 'manager' ? 'staff' : 'manager'))}
                   >
-                    {e.role === 'manager' ? 'הפוך לעובד' : 'הפוך למנהל'}
+                    {e.role === 'manager' ? t('הפוך לעובד') : t('הפוך למנהל')}
                   </button>
                   {e.role === 'staff' && (
                     <button
@@ -97,29 +98,29 @@ export default function AdminEmployees() {
                       className="small"
                       onClick={() => void run(setInventoryEditor(e.id, !e.inventoryEditor))}
                     >
-                      {e.inventoryEditor ? 'בטל עריכת מלאי' : 'אפשר עריכת מלאי'}
+                      {e.inventoryEditor ? t('בטל עריכת מלאי') : t('אפשר עריכת מלאי')}
                     </button>
                   )}
                   <button
                     type="button"
                     className="small"
                     onClick={() => {
-                      if (confirm(`לאפס את הקוד של ${e.name} ל-${DEFAULT_PIN}?`))
-                        void run(resetPin(e.id), `הקוד של ${e.name} אופס ל-${DEFAULT_PIN}`);
+                      if (confirm(t('לאפס את הקוד של {name} ל-{DEFAULT_PIN}?', { name: e.name, DEFAULT_PIN })))
+                        void run(resetPin(e.id), t('הקוד של {name} אופס ל-{DEFAULT_PIN}', { name: e.name, DEFAULT_PIN }));
                     }}
                   >
-                    אפס קוד
+                    {t('אפס קוד')}
                   </button>
                   <button
                     type="button"
                     className="small danger"
                     disabled={isMe || lastManager}
-                    title={isMe ? 'אי אפשר למחוק את עצמך' : ''}
+                    title={isMe ? t('אי אפשר למחוק את עצמך') : ''}
                     onClick={() => {
-                      if (confirm(`למחוק את ${e.name}? הפעולה לא ניתנת לביטול.`)) void run(removeEmployee(e.id));
+                      if (confirm(t('למחוק את {name}? הפעולה לא ניתנת לביטול.', { name: e.name }))) void run(removeEmployee(e.id));
                     }}
                   >
-                    מחק
+                    {t('מחק')}
                   </button>
                 </span>
               </div>

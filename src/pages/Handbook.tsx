@@ -5,6 +5,7 @@ import { newId, useCollection } from '../lib/db';
 import { CATEGORY_ORDER, excerpt, seedHandbook } from '../lib/handbook';
 import type { HandbookSection } from '../lib/types';
 import { Markdown } from '../components/Markdown';
+import { t } from '../lib/i18n';
 
 function useHandbook() {
   return useCollection<HandbookSection>('handbook', seedHandbook);
@@ -31,39 +32,39 @@ export function HandbookList() {
 
   return (
     <>
-      <h1>📖 ספר הנהלים</h1>
+      <h1>{t('📖 ספר הנהלים')}</h1>
       <input
         className="search"
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="חיפוש: בצק, קוקטייל, חשמל, טיפ…"
-        aria-label="חיפוש בנהלים"
+        placeholder={t('חיפוש: בצק, קוקטייל, חשמל, טיפ…')}
+        aria-label={t('חיפוש בנהלים')}
       />
-      {loading && <p className="muted">טוען…</p>}
+      {loading && <p className="muted">{t('טוען…')}</p>}
 
       {query ? (
         <section>
-          <p className="muted small-text">{results.length} תוצאות</p>
+          <p className="muted small-text">{results.length}{' '}{t('תוצאות')}</p>
           {results.map((s) => (
             <Link key={s.id} to={`/handbook/${s.id}`} className="card result">
               <strong>
-                {s.icon} {s.title}
+                {s.icon} {t(s.title)}
               </strong>
               <span className="muted small-text">{excerpt(s.body, query)}</span>
             </Link>
           ))}
-          {results.length === 0 && <p className="muted empty">לא נמצא כלום. נסו מילה אחרת.</p>}
+          {results.length === 0 && <p className="muted empty">{t('לא נמצא כלום. נסו מילה אחרת.')}</p>}
         </section>
       ) : (
         categories.map((c) => (
           <section key={c.name}>
-            <h2>{c.name}</h2>
+            <h2>{t(c.name)}</h2>
             <div className="grid2">
               {c.sections.map((s) => (
                 <Link key={s.id} to={`/handbook/${s.id}`} className="card tile">
                   <div className="tile-title">
-                    <span className="big-ico">{s.icon}</span> {s.title}
+                    <span className="big-ico">{s.icon}</span> {t(s.title)}
                   </div>
                 </Link>
               ))}
@@ -74,7 +75,7 @@ export function HandbookList() {
 
       {isManager && !query && (
         <Link to="/handbook/new" className="primary wide as-link">
-          + פרק חדש
+          {t('+ פרק חדש')}
         </Link>
       )}
     </>
@@ -90,8 +91,8 @@ export function HandbookSectionPage() {
   const section = items.find((s) => s.id === id);
   const [editing, setEditing] = useState(isNew);
 
-  if (loading) return <p className="muted">טוען…</p>;
-  if (!isNew && !section) return <p>הפרק לא נמצא. <Link to="/handbook">חזרה</Link></p>;
+  if (loading) return <p className="muted">{t('טוען…')}</p>;
+  if (!isNew && !section) return <p>{t('הפרק לא נמצא.')}{' '}<Link to="/handbook">{t('חזרה')}</Link></p>;
 
   if (editing && isManager) {
     return (
@@ -109,7 +110,7 @@ export function HandbookSectionPage() {
           isNew
             ? undefined
             : async () => {
-                if (confirm('למחוק את הפרק הזה?')) {
+                if (confirm(t('למחוק את הפרק הזה?'))) {
                   await remove(section!.id);
                   nav('/handbook');
                 }
@@ -121,14 +122,14 @@ export function HandbookSectionPage() {
 
   return (
     <>
-      <Link to="/handbook" className="back">← לכל הנהלים</Link>
+      <Link to="/handbook" className="back">{t('← לכל הנהלים')}</Link>
       <div className="section-head">
         <h1>
-          {section!.icon} {section!.title}
+          {section!.icon} {t(section!.title)}
         </h1>
         {isManager && (
           <button type="button" className="small" onClick={() => setEditing(true)}>
-            ✏️ עריכה
+            {t('✏️ עריכה')}
           </button>
         )}
       </div>
@@ -165,19 +166,19 @@ function SectionEditor({
         if (valid) void onSave({ ...s, title: s.title.trim(), body: s.body.trim() });
       }}
     >
-      <h1>{isNew ? 'פרק חדש' : 'עריכת פרק'}</h1>
+      <h1>{isNew ? t('פרק חדש') : t('עריכת פרק')}</h1>
       <div className="row">
         <label className="inline" style={{ flex: '0 0 5rem' }}>
-          אייקון
+          {t('אייקון')}
           <input value={s.icon} onChange={(e) => setS({ ...s, icon: e.target.value })} maxLength={4} />
         </label>
         <label style={{ flex: 1 }}>
-          כותרת
+          {t('כותרת')}
           <input value={s.title} onChange={(e) => setS({ ...s, title: e.target.value })} required />
         </label>
       </div>
       <label>
-        קטגוריה
+        {t('קטגוריה')}
         <input list="cats" value={s.category} onChange={(e) => setS({ ...s, category: e.target.value })} />
         <datalist id="cats">
           {categories.map((c) => (
@@ -186,9 +187,9 @@ function SectionEditor({
         </datalist>
       </label>
       <div className="row between">
-        <span>תוכן (Markdown: ## כותרת, - רשימה, **מודגש**)</span>
+        <span>{t('תוכן (Markdown: ## כותרת, - רשימה, **מודגש**)')}</span>
         <button type="button" className="small" onClick={() => setPreview((p) => !p)}>
-          {preview ? 'חזרה לעריכה' : 'תצוגה מקדימה'}
+          {preview ? t('חזרה לעריכה') : t('תצוגה מקדימה')}
         </button>
       </div>
       {preview ? (
@@ -200,14 +201,14 @@ function SectionEditor({
       )}
       <div className="row">
         <button type="submit" className="primary" disabled={!valid}>
-          שמור
+          {t('שמור')}
         </button>
         <button type="button" onClick={onCancel}>
-          ביטול
+          {t('ביטול')}
         </button>
         {onDelete && (
           <button type="button" className="danger" onClick={() => void onDelete()}>
-            מחק פרק
+            {t('מחק פרק')}
           </button>
         )}
       </div>
