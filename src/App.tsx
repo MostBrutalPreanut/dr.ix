@@ -14,6 +14,7 @@ import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminChecklists from './pages/admin/AdminChecklists';
 import AdminTasks from './pages/admin/AdminTasks';
 import AdminWix from './pages/admin/AdminWix';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function Gate() {
   const { user, isManager } = useAuth();
@@ -46,10 +47,12 @@ function Gate() {
 
 export default function App() {
   return (
-    <HashRouter>
-      <AuthProvider>
-        <Gate />
-      </AuthProvider>
-    </HashRouter>
+    <ErrorBoundary resetKey="app">
+      <HashRouter>
+        <AuthProvider>
+          <Gate />
+        </AuthProvider>
+      </HashRouter>
+    </ErrorBoundary>
   );
 }

@@ -15,7 +15,11 @@ export function Layout() {
   const { pathname } = useLocation();
   const connection = useConnection();
   // a new screen always starts at the top (the header is sticky, so a kept scroll position would hide the title)
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // (braces on purpose: an effect must return nothing or a cleanup function, and in newer browsers
+  // window.scrollTo() returns a value - returning it made React crash on the first navigation)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   return (
     <div className="app">
       <div className="site-header">
