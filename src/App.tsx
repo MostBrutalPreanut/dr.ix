@@ -17,6 +17,9 @@ import AdminTasks from './pages/admin/AdminTasks';
 import AdminWix from './pages/admin/AdminWix';
 import AdminInventory from './pages/admin/AdminInventory';
 import InventoryPage from './pages/InventoryPage';
+import SchedulePage from './pages/SchedulePage';
+import ScheduleRequestPage from './pages/ScheduleRequestPage';
+import AdminSchedule from './pages/admin/AdminSchedule';
 import TipsPage from './pages/TipsPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LangProvider } from './lib/i18n';
@@ -32,6 +35,8 @@ function Gate() {
         <Route path="checklist/:id" element={<ChecklistPage />} />
         <Route path="reservations" element={<ReservationsPage />} />
         <Route path="tips" element={<TipsPage />} />
+        <Route path="schedule" element={<SchedulePage />} />
+        <Route path="schedule/request" element={<ScheduleRequestPage />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="handbook" element={<HandbookList />} />
         <Route path="handbook/:id" element={<HandbookSectionPage />} />
@@ -49,6 +54,7 @@ function Gate() {
             <Route path="admin/employees" element={<AdminEmployees />} />
             <Route path="admin/checklists" element={<AdminChecklists />} />
             <Route path="admin/tasks" element={<AdminTasks />} />
+            <Route path="admin/schedule" element={<AdminSchedule />} />
             <Route path="admin/wix" element={<AdminWix />} />
           </>
         )}

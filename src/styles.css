@@ -1109,3 +1109,83 @@ a.stock-task {
 .guests-age > label {
   flex-basis: 5.5rem;
 }
+
+/* work schedule */
+.small-link {
+  font-size: 0.9rem;
+}
+.week-nav {
+  margin: 0.6rem 0;
+}
+.week-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.day-card.today {
+  border-color: var(--yellow);
+}
+.day-card.mine {
+  border-inline-start: 5px solid var(--blue);
+}
+.day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.day-note {
+  margin: 0.3rem 0;
+  color: var(--yellow);
+  font-weight: 700;
+}
+.shift-block {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--line);
+}
+.staff-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  margin-top: 0.25rem;
+  border-radius: 8px;
+  background: var(--soft);
+}
+.staff-line.me {
+  background: var(--blue);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.start-time {
+  font-variant-numeric: tabular-nums;
+}
+input.time-in {
+  width: 7.5rem;
+}
+.day-editor input[type='time'],
+.day-editor select {
+  width: auto;
+}
+.shift-fields {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.7rem;
+  margin: 0;
+}
+button.chip.pick.shift-pick.event {
+  border-color: var(--pink);
+}
+button.chip.pick.asked {
+  border-color: var(--yellow);
+}
+@media (max-width: 360px) {
+  .tabbar a {
+    font-size: 0.7rem;
+  }
+}
