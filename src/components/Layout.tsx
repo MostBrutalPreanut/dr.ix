@@ -50,6 +50,10 @@ export function Layout() {
             <span className="ico">📋</span>
             <span>{t('היום')}</span>
           </NavLink>
+          <NavLink to="/schedule">
+            <span className="ico">🗓️</span>
+            <span>{t('סידור')}</span>
+          </NavLink>
           {isShared && (
             <NavLink to="/reservations">
               <span className="ico">📅</span>

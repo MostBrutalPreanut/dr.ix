@@ -46,14 +46,17 @@ create table if not exists public.sessions (
 );
 
 -- Which role may read / write each collection.
---   read_role : 'any' (every signed-in employee) | 'manager'
+--   read_role : 'any' (every signed-in employee) | 'manager' | 'self' (employees get only their own documents)
 --   write_role: 'any' | 'manager' | 'inventory' (manager or inventory editor) | 'self' (only your own documents)
 create table if not exists public.acl (
   collection text primary key,
-  read_role  text not null check (read_role in ('any', 'manager')),
+  read_role  text not null check (read_role in ('any', 'manager', 'self')),
   write_role text not null check (write_role in ('any', 'manager', 'self'))
 );
 -- (re-created below so that an existing table accepts the new 'inventory' role)
+alter table public.acl drop constraint if exists acl_read_role_check;
+alter table public.acl add constraint acl_read_role_check
+  check (read_role in ('any', 'manager', 'self'));
 alter table public.acl drop constraint if exists acl_write_role_check;
 alter table public.acl add constraint acl_write_role_check
   check (write_role in ('any', 'manager', 'self', 'inventory'));
@@ -74,7 +77,11 @@ insert into public.acl (collection, read_role, write_role) values
   ('inventoryReports', 'any',    'any'),
   ('inventoryPhotos',  'any',    'any'),
   ('tipEntries',       'manager', 'any'),
-  ('tipWorkers',       'any',    'any')
+  ('tipWorkers',       'any',    'any'),
+  ('shiftDays',        'any',    'manager'),
+  ('shiftAssign',      'manager', 'manager'),
+  ('schedulePublished','any',    'manager'),
+  ('shiftRequests',    'self',   'self')
 on conflict (collection) do nothing;
 -- tip amounts are for managers only (employees may add, never read) - also fixes an earlier install
 update public.acl set read_role = 'manager' where collection = 'tipEntries';
@@ -404,6 +411,7 @@ begin
       where d.collection = p_collection
         and (p_from is null or d.id >= p_from)
         and (p_to   is null or d.id <= p_to)
+        and (a.read_role <> 'self' or e.role = 'manager' or d.data ->> 'employeeId' = e.id)
       order by d.id
       limit 5000
     ) t), '[]'::jsonb);

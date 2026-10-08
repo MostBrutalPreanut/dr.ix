@@ -10,6 +10,7 @@ import type { Checklist, ChecklistCheck, ChecklistClosure, InventoryItem, Invent
 import { isDueOn } from '../lib/inventory';
 import { seedChecklists } from '../seed/checklists';
 import { seedSettings, seedTasks } from '../seed/tasks';
+import { MyShiftCard } from '../components/MyShiftCard';
 import { NoteComposer } from '../components/NoteComposer';
 import { ReservationsSummary } from '../components/Reservations';
 import { t, tl } from '../lib/i18n';
@@ -157,6 +158,8 @@ export default function Today() {
           );
         })}
       </section>
+
+      <MyShiftCard today={today} />
 
       <ReservationsSummary date={today} />
 

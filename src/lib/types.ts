@@ -252,3 +252,66 @@ export interface TipWorkerDoc extends Doc {
   at: string;
 }
 
+
+// ---------- work schedule ----------
+
+/** One shift of a day (a regular one, or a special event when `event` is set). */
+export interface ShiftDef {
+  /** 'eve' / 'noon' for the regular ones, `ev-...` for events */
+  id: string;
+  /** "ערב", "צהריים" or the event's name */
+  label: string;
+  labelEn?: string;
+  /** opening hours of the shift (shown to everyone) */
+  from?: string;
+  to?: string;
+  /** start time a worker gets when added to the shift (each worker's own time can differ) */
+  defaultStart: string;
+  /** how many workers fit (up to 4) */
+  max: number;
+  event?: boolean;
+}
+
+/** A day that differs from the weekly template (closed, other hours, a note, an event). id = date */
+export interface ShiftDay extends Doc {
+  date: string;
+  shifts: ShiftDef[];
+  note?: string;
+  noteEn?: string;
+}
+
+/** Draft assignment (managers only). id = `${date}|${shiftId}|${employeeId}` */
+export interface ShiftAssignment extends Doc {
+  date: string;
+  shiftId: string;
+  employeeId: string;
+  start: string;
+}
+
+export interface PublishedShift extends ShiftDef {
+  staff: { employeeId: string; start: string }[];
+}
+
+export interface PublishedDay {
+  date: string;
+  note?: string;
+  noteEn?: string;
+  shifts: PublishedShift[];
+}
+
+/** What the team sees: a snapshot of one week, written when a manager publishes. id = weekStart (Sunday) */
+export interface PublishedWeek extends Doc {
+  weekStart: string;
+  days: PublishedDay[];
+  publishedAt: string;
+  by: string;
+}
+
+/** What one person asked for next week. id = `${weekStart}|${employeeId}`; shifts = `${date}|${shiftId}` */
+export interface ShiftRequest extends Doc {
+  weekStart: string;
+  employeeId: string;
+  shifts: string[];
+  note?: string;
+  at: string;
+}
