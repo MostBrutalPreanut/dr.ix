@@ -157,11 +157,15 @@ export function useCollection<T extends Doc>(name: string, seed?: Seed<T>, range
   const [error, setError] = useState<string | null>(null);
   const seedRef = useRef(seed);
   seedRef.current = seed;
+  // Bumped by every local write, so an older answer from the server never wipes a fresh change.
+  const writes = useRef(0);
 
   const load = useCallback(async () => {
+    const startedAt = writes.current;
     try {
       let rows = (await backend.list(name, from !== undefined && to !== undefined ? { from, to } : undefined)) as T[];
       if (seedRef.current) rows = await seedIfEmpty(name, rows, seedRef.current);
+      if (writes.current !== startedAt) return; // a write happened meanwhile - its own refresh follows
       cache.set(cacheKey, rows);
       setItems(rows);
       setError(null);
@@ -180,20 +184,42 @@ export function useCollection<T extends Doc>(name: string, seed?: Seed<T>, range
     return backend.subscribe(name, () => void load());
   }, [name, load]);
 
-  const save = useCallback(
-    async (doc: T) => {
-      await backend.upsert(name, doc);
-      await load();
+  /** Shows the change at once (no waiting for the server), then confirms it; on failure the real data comes back. */
+  const optimistic = useCallback(
+    async (apply: (rows: T[]) => T[], send: () => Promise<void>) => {
+      writes.current += 1;
+      const next = apply((cache.get(cacheKey) as T[] | undefined) ?? []);
+      cache.set(cacheKey, next);
+      setItems(next);
+      try {
+        await send();
+      } catch (e) {
+        writes.current += 1;
+        void load();
+        throw e;
+      }
+      writes.current += 1;
+      void load();
     },
-    [name, load],
+    [cacheKey, load],
+  );
+
+  const save = useCallback(
+    (doc: T) =>
+      optimistic(
+        (rows) => (rows.some((r) => r.id === doc.id) ? rows.map((r) => (r.id === doc.id ? doc : r)) : [...rows, doc]),
+        () => backend.upsert(name, doc),
+      ),
+    [name, optimistic],
   );
 
   const remove = useCallback(
-    async (id: string) => {
-      await backend.remove(name, id);
-      await load();
-    },
-    [name, load],
+    (id: string) =>
+      optimistic(
+        (rows) => rows.filter((r) => r.id !== id),
+        () => backend.remove(name, id),
+      ),
+    [name, optimistic],
   );
 
   return { items, loading, error, save, remove };

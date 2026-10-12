@@ -5,7 +5,9 @@ import { useCollection } from '../lib/db';
 import { addDays, formatLongDate, weekStart } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { weekText } from '../lib/rota';
-import type { PublishedWeek } from '../lib/types';
+import type { PublishedWeek, Settings } from '../lib/types';
+import { colorIndexOf, colorStyle } from '../lib/rotaColors';
+import { WeekGrid } from '../components/WeekGrid';
 import { Hours, WeekNav, dayTitle, shiftName } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
 
@@ -23,6 +25,15 @@ export default function SchedulePage() {
   const [week, setWeek] = useState(thisWeek);
   const published = useCollection<PublishedWeek>('schedulePublished', undefined, { from: min, to: max });
   const [copied, setCopied] = useState(false);
+  const settings = useCollection<Settings>('settings');
+  const colorOf = (id: string) => colorStyle(colorIndexOf(id, settings.items[0]?.rotaColors));
+  const [view, setViewState] = useState<'grid' | 'list'>(() => {
+    try { return localStorage.getItem('drix:rotaView') === 'list' ? 'list' : 'grid'; } catch { return 'grid'; }
+  });
+  const setView = (v: 'grid' | 'list') => {
+    setViewState(v);
+    try { localStorage.setItem('drix:rotaView', v); } catch { /* not important */ }
+  };
 
   const current = published.items.find((w) => w.id === week);
   const nextPublished = published.items.some((w) => w.id === nextWeek);
@@ -66,7 +77,26 @@ export default function SchedulePage() {
 
       {!current && !published.loading && <p className="muted empty">{t('הסידור לשבוע הזה עדיין לא פורסם.')}</p>}
 
-      {current &&
+      {current && (
+        <div className="view-toggle" role="group" aria-label={t('תצוגה')}>
+          <button type="button" className={`chip pick${view === 'grid' ? ' on' : ''}`} aria-pressed={view === 'grid'} onClick={() => setView('grid')}>{t('🎨 טבלה צבעונית')}</button>
+          <button type="button" className={`chip pick${view === 'list' ? ' on' : ''}`} aria-pressed={view === 'list'} onClick={() => setView('list')}>{t('📋 רשימה לפי ימים')}</button>
+        </div>
+      )}
+
+      {current && view === 'grid' && (
+        <WeekGrid
+          days={days}
+          people={employees
+            .filter((e) => days.some((d) => d.shifts.some((s) => s.staff.some((w) => w.employeeId === e.id))))
+            .sort((a, b) => Number(b.id === user.id) - Number(a.id === user.id) || a.name.localeCompare(b.name, 'he'))}
+          colorOf={colorOf}
+          meId={user.id}
+          today={today}
+        />
+      )}
+
+      {current && view === 'list' &&
         days.map((d) => {
           const mine = d.shifts.some((s) => s.staff.some((w) => w.employeeId === user.id));
           return (
@@ -88,7 +118,7 @@ export default function SchedulePage() {
                   {s.staff.length === 0 && <p className="muted small-text">{t('עדיין לא שובצו עובדים')}</p>}
                   {s.staff.map((w) => (
                     <div key={w.employeeId} className={`staff-line${w.employeeId === user.id ? ' me' : ''}`}>
-                      <span>{nameOf(w.employeeId)}</span>
+                      <span><span className="name-dot" style={colorOf(w.employeeId)} aria-hidden="true" />{nameOf(w.employeeId)}</span>
                       <bdi dir="ltr" className="start-time">{w.start}</bdi>
                     </div>
                   ))}
