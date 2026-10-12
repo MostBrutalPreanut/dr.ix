@@ -525,4 +525,7 @@ export const UI: Record<string, string> = {
   "🎨 צבעי עובדים": "🎨 Worker colours",
   "לחיצה על העיגול מחליפה צבע.": "Tap the circle to change the colour.",
   "החלף צבע": "Change colour",
+  "מי ביקש, יום ויום": "Who asked, day by day",
+  "לוחצים על שם כדי לשבץ אותו במשמרת (✓ = משובץ). לחיצה נוספת מסירה.": "Tap a name to assign them to the shift (✓ = assigned). Tap again to remove.",
+  "אף אחד לא ביקש": "Nobody asked",
 };

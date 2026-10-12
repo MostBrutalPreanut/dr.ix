@@ -159,6 +159,8 @@ export default function AdminSchedule() {
           colorIndex={(id) => colorIndexOf(id, saved)}
           onColor={(id, i) => guard(() => saveColors({ ...fillColors(employees, saved), [id]: i % PALETTE_SIZE }))}
           asked={askedSet}
+          requests={requests.items}
+          nameOf={nameOf}
           cell={cell}
           onCell={(date, employeeId) => {
             setCell({ date, employeeId });
@@ -439,7 +441,7 @@ function EventsSection({ today, events, onAdd, onRemove, onGo }: {
 }
 
 /** The colour-coded week table with a small editor for the tapped cell (person + day). */
-function GridBuilder({ draft, today, people, colorOf, colorIndex, onColor, asked, cell, onCell, onClose, shiftsOf, docs, onAssign, onUnassign, onStart, editDay, onEditDay, dayEditor }: {
+function GridBuilder({ draft, today, people, colorOf, colorIndex, onColor, asked, requests, nameOf, cell, onCell, onClose, shiftsOf, docs, onAssign, onUnassign, onStart, editDay, onEditDay, dayEditor }: {
   draft: PublishedDay[];
   today: string;
   people: { id: string; name: string }[];
@@ -447,6 +449,8 @@ function GridBuilder({ draft, today, people, colorOf, colorIndex, onColor, asked
   colorIndex(id: string): number;
   onColor(id: string, index: number): void;
   asked: Set<string>;
+  requests: ShiftRequest[];
+  nameOf(id: string): string;
   cell: { date: string; employeeId: string } | null;
   onCell(date: string, employeeId: string): void;
   onClose(): void;
@@ -465,6 +469,43 @@ function GridBuilder({ draft, today, people, colorOf, colorIndex, onColor, asked
   const total = (date: string) => draft.find((d) => d.date === date)?.shifts.reduce((n, s) => n + s.staff.length, 0) ?? 0;
   return (
     <>
+      <section className="card">
+        <h3>{t('מי ביקש, יום ויום')}</h3>
+        <p className="muted small-text">{t('לוחצים על שם כדי לשבץ אותו במשמרת (✓ = משובץ). לחיצה נוספת מסירה.')}</p>
+        {draft.map((d) => {
+          const defs = shiftsOf(d.date);
+          const notes = requests.filter((r) => r.dayNotes?.[d.date]);
+          return (
+            <div key={d.date} className="shift-block">
+              <strong>{dayTitle(d.date)}</strong>
+              {defs.length === 0 && <span className="muted small-text block">{t('סגור')}</span>}
+              {defs.map((sh) => {
+                const who = requests.filter((r) => r.shifts.includes(requestKey(d.date, sh.id))).map((r) => r.employeeId);
+                const inCount = docs.filter((a) => a.date === d.date && a.shiftId === sh.id).length;
+                return (
+                  <div key={sh.id}>
+                    <span className="muted small-text">{sh.event ? '🎉 ' : ''}{shiftName(sh)} · {inCount}/{sh.max}</span>
+                    <div className="chips">
+                      {who.length === 0 && <span className="muted small-text">{t('אף אחד לא ביקש')}</span>}
+                      {who.map((id) => {
+                        const a = docs.find((x) => x.id === assignmentId(d.date, sh.id, id));
+                        return (
+                          <button key={id} type="button" className={`chip pick${a ? ' on' : ''}`} onClick={() => (a ? onUnassign(a) : onAssign(d.date, sh, id))}>
+                            <span className="name-dot" style={colorOf(id)} aria-hidden="true" />{a ? '✓ ' : ''}{nameOf(id)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              {notes.map((r) => (
+                <span key={r.id} className="small-text block">📝 <strong>{nameOf(r.employeeId)}:</strong> {r.dayNotes![d.date]}</span>
+              ))}
+            </div>
+          );
+        })}
+      </section>
       <WeekGrid days={draft} people={people} colorOf={colorOf} today={today} asked={asked} selected={cell} onCell={onCell} />
       <p className="muted small-text">{t('לוחצים על משבצת כדי לשבץ, לשנות שעה או להסיר. 🙋 = ביקש/ה לעבוד ביום הזה.')}</p>
 
