@@ -164,6 +164,8 @@ export interface Settings extends Doc {
   biweeklyAnchor: string;
   /** First day the app was in use - tasks before it are never shown as late. */
   startDate?: string;
+  /** colour (palette index) of each person in the work schedule, by employee id */
+  rotaColors?: Record<string, number>;
 }
 
 // ---------- inventory ----------
@@ -237,6 +239,8 @@ export interface InventoryPhoto extends Doc {
 export interface TipEntry extends Doc {
   date: string;
   amount: number;
+  /** free note from whoever entered it (managers read it) */
+  note?: string;
   by: string;
   at: string;
 }
@@ -286,6 +290,8 @@ export interface ShiftAssignment extends Doc {
   shiftId: string;
   employeeId: string;
   start: string;
+  /** order the manager added the person in (the list keeps this order, not the start time) */
+  order?: number;
 }
 
 export interface PublishedShift extends ShiftDef {
@@ -313,5 +319,7 @@ export interface ShiftRequest extends Doc {
   employeeId: string;
   shifts: string[];
   note?: string;
+  /** per-day remarks, by date (e.g. "only until 22:00") */
+  dayNotes?: Record<string, string>;
   at: string;
 }

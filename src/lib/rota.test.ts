@@ -22,7 +22,7 @@ describe('weekly template', () => {
 });
 
 describe('buildWeek', () => {
-  it('covers 7 days, orders by start time, caps at the shift size and skips unknown shifts / people', () => {
+  it('covers 7 days, orders by start time when nothing else is known, and skips unknown shifts / people', () => {
     expect(weekDates(WEEK)).toHaveLength(7);
     const assignments = [
       a('2026-10-12', 'eve', 'b', '17:00'),
@@ -37,8 +37,16 @@ describe('buildWeek', () => {
     expect(mon.shifts[0].staff.map((s) => s.employeeId)).toEqual(['a', 'b']);
     expect(days[0].shifts).toEqual([]);
 
-    const capped: ShiftDay = { id: '2026-10-12', date: '2026-10-12', shifts: [{ ...templateShifts(1)[0], max: 1 }] };
-    expect(buildWeek(WEEK, [capped], assignments)[1].shifts[0].staff).toHaveLength(1);
+  });
+
+  it('keeps the order people were added in, and lets more people than planned in', () => {
+    const planned: ShiftDay = { id: '2026-10-12', date: '2026-10-12', shifts: [{ ...templateShifts(1)[0], max: 1 }] };
+    const rows = [
+      { ...a('2026-10-12', 'eve', 'x', '17:00'), order: 1 },
+      { ...a('2026-10-12', 'eve', 'bar', '19:00'), order: 2 },
+      { ...a('2026-10-12', 'eve', 'z', '16:30'), order: 3 },
+    ];
+    expect(buildWeek(WEEK, [planned], rows)[1].shifts[0].staff.map((s) => s.employeeId)).toEqual(['x', 'bar', 'z']);
   });
 
   it('detects unpublished changes', () => {

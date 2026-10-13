@@ -45,22 +45,24 @@ function DayNav({ date, today, back, onChange }: { date: string; today: string; 
   );
 }
 
-function AmountForm({ onAdd }: { onAdd(amount: number): Promise<void> }) {
+function AmountForm({ onAdd }: { onAdd(amount: number, note: string): Promise<void> }) {
   const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const n = Math.round(Number(amount.replace(',', '.')) * 100) / 100;
   return (
     <form
-      className="row"
+      className="form"
       onSubmit={(e) => {
         e.preventDefault();
         if (!(n > 0) || busy) return;
         setBusy(true);
-        void onAdd(n)
-          .then(() => setAmount(''))
+        void onAdd(n, note.trim())
+          .then(() => { setAmount(''); setNote(''); })
           .finally(() => setBusy(false));
       }}
     >
+      <div className="row">
       <input
         style={{ flex: 1 }}
         type="number"
@@ -75,6 +77,8 @@ function AmountForm({ onAdd }: { onAdd(amount: number): Promise<void> }) {
       <button type="submit" className="primary" disabled={!(n > 0) || busy}>
         {t('הוסף')}
       </button>
+      </div>
+      <input value={note} maxLength={300} placeholder={t('הערה (לא חובה), למשל: טיפ מקבוצה גדולה')} aria-label={t('הערה')} onChange={(e) => setNote(e.target.value)} />
     </form>
   );
 }
@@ -168,11 +172,11 @@ function StaffTips() {
   const [added, setAdded] = useState<{ id: string; amount: number; date: string; at: string }[]>([]);
   const [error, setError] = useState('');
 
-  async function add(amount: number) {
+  async function add(amount: number, note: string) {
     const id = `${date}|${newId()}`;
     const at = new Date().toISOString();
     try {
-      await backend.upsert('tipEntries', { id, date, amount, by: user!.id, at } as TipEntry);
+      await backend.upsert('tipEntries', { id, date, amount, ...(note ? { note } : {}), by: user!.id, at } as TipEntry);
       setAdded((a) => [...a, { id, amount, date, at }]);
       setError('');
     } catch {
@@ -284,7 +288,7 @@ function ManagerTips() {
           {t('היום שנבחר:')}{' '}{money(day.total)}
         </h2>
         <AmountForm
-          onAdd={(amount) => guard(() => dayEntries.save({ id: `${date}|${newId()}`, date, amount, by: user!.id, at: new Date().toISOString() }))}
+          onAdd={(amount, note) => guard(() => dayEntries.save({ id: `${date}|${newId()}`, date, amount, ...(note ? { note } : {}), by: user!.id, at: new Date().toISOString() }))}
         />
         {dayEntries.items
           .slice()
@@ -296,6 +300,7 @@ function ManagerTips() {
                 <span className="muted small-text">
                   {nameOf(e.by)} · {formatTime(e.at)}
                 </span>
+                {e.note && <span className="small-text block">📝 {e.note}</span>}
               </span>
               <button
                 type="button"
@@ -374,6 +379,9 @@ function ManagerTips() {
                   .join(' · ')}
               </span>
             )}
+            {monthEntries.items.filter((e) => e.date === d.date && e.note).map((e) => (
+              <span key={e.id} className="small-text block">📝 {e.note} <span className="muted">({nameOf(e.by)})</span></span>
+            ))}
             <button type="button" className="small" onClick={() => setDate(d.date)}>
               {t('פתח את היום')}
             </button>

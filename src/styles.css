@@ -1189,3 +1189,115 @@ button.chip.pick.asked {
     font-size: 0.7rem;
   }
 }
+
+/* work schedule: colour-coded week table */
+.week-grid-wrap {
+  overflow-x: auto;
+  margin: 0.6rem 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card, transparent);
+}
+.week-grid {
+  border-collapse: separate;
+  border-spacing: 2px;
+  width: 100%;
+  min-width: 29rem;
+  font-size: 0.85rem;
+}
+.week-grid th,
+.week-grid td {
+  padding: 0;
+  text-align: center;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.week-grid thead th {
+  padding: 0.3rem 0.1rem;
+  line-height: 1.2;
+}
+.week-grid thead th.today {
+  color: var(--yellow);
+}
+.week-grid thead th.closed {
+  opacity: 0.5;
+}
+.week-grid th.who {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  min-width: 5.2rem;
+  text-align: start;
+  padding: 0.3rem 0.4rem;
+  background: var(--bg, #fff);
+  white-space: nowrap;
+}
+.week-grid tr.me th.who {
+  color: var(--blue);
+}
+.week-grid .dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  margin-inline-end: 0.35rem;
+}
+.week-grid .cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4rem;
+  border-radius: 6px;
+}
+.week-grid .cell.off {
+  background: var(--soft);
+  color: var(--muted, #888);
+  font-weight: 400;
+}
+.week-grid .cell.off.asked {
+  outline: 2px solid var(--yellow);
+  outline-offset: -2px;
+}
+.week-grid .cell-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.week-grid td.sel .cell {
+  outline: 3px solid var(--blue);
+  outline-offset: 1px;
+}
+.cell-editor {
+  margin: 0.4rem 0;
+}
+.name-dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  margin-inline-end: 0.35rem;
+  vertical-align: baseline;
+}
+button.swatch {
+  width: 1.6rem;
+  height: 1.6rem;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+}
+.view-toggle {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+input.day-remark {
+  margin-top: 0.4rem;
+  width: 100%;
+}
