@@ -1222,7 +1222,7 @@ button.chip.pick.asked {
 .week-grid thead th.closed {
   opacity: 0.5;
 }
-.week-grid th.who {
+.week-grid th.wg-who {
   position: sticky;
   inset-inline-start: 0;
   z-index: 1;
@@ -1232,7 +1232,7 @@ button.chip.pick.asked {
   background: var(--bg, #fff);
   white-space: nowrap;
 }
-.week-grid tr.me th.who {
+.week-grid tr.wg-me th.wg-who {
   color: var(--blue);
 }
 .week-grid .dot {
@@ -1300,4 +1300,8 @@ button.swatch {
 input.day-remark {
   margin-top: 0.4rem;
   width: 100%;
+}
+h2.week-sub {
+  margin: 1rem 0 0;
+  font-size: 1.1rem;
 }
