@@ -530,4 +530,5 @@ export const UI: Record<string, string> = {
   "אף אחד לא ביקש": "Nobody asked",
   "שבוע הבא": "Next week",
   "הסידור לשבוע הבא עדיין לא פורסם.": "Next week's schedule has not been published yet.",
+  "בחירת שבוע": "Choose a week",
 };

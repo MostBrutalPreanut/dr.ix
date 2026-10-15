@@ -13,7 +13,7 @@ import { pruneEn, t, tl } from '../../lib/i18n';
 import { seedSettings } from '../../seed/tasks';
 
 const FORWARD_WEEKS = 26; // events can be announced months ahead
-const BACK_WEEKS = 4;
+const BACK_WEEKS = 52; // past weeks stay viewable (as the colour table) for a year
 
 /** Managers: build the week (who works when), add events, see the requests, and publish to the team. */
 export default function AdminSchedule() {

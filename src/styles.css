@@ -1305,3 +1305,9 @@ h2.week-sub {
   margin: 1rem 0 0;
   font-size: 1.1rem;
 }
+select.week-select {
+  width: auto;
+  max-width: 100%;
+  font-weight: 700;
+  text-align: center;
+}

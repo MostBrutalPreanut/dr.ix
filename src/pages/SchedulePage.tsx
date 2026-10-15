@@ -11,7 +11,7 @@ import { WeekGrid } from '../components/WeekGrid';
 import { Hours, WeekNav, dayTitle, shiftName, weekLabel } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
 
-const BACK_WEEKS = 4;
+const BACK_WEEKS = 12;
 const FORWARD_WEEKS = 12;
 
 /** The published work schedule: everybody sees it, the signed-in person's own shifts are highlighted. */

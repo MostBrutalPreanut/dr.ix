@@ -20,14 +20,25 @@ export function weekLabel(ws: string): string {
 
 export function WeekNav({ week, min, max, onChange, current }: { week: string; min: string; max: string; onChange(w: string): void; current?: string }) {
   const thisWeek = current ?? weekStart(week);
+  // newest first: a few weeks ahead, then back in time (the arrows still reach every other week)
+  const top = [addDays(thisWeek, 21), max].sort()[0];
+  const options: string[] = [];
+  for (let w = top; w >= min; w = addDays(w, -7)) options.push(w);
+  if (!options.includes(week)) options.unshift(week);
+  options.sort().reverse();
   return (
     <div className="row between week-nav">
       <button type="button" className="small" disabled={week <= min} onClick={() => onChange(addDays(week, -7))} aria-label={t('השבוע הקודם')}>
         {t('→')}
       </button>
       <span className="week-title">
-        <strong>{t('שבוע')} <bdi dir="ltr">{weekLabel(week)}</bdi></strong>
-        {week === thisWeek && <span className="chip soft">{t('השבוע')}</span>}
+        <select className="week-select" value={week} aria-label={t('בחירת שבוע')} onChange={(e) => onChange(e.target.value)}>
+          {options.map((w) => (
+            <option key={w} value={w}>
+              {t('שבוע')} {weekLabel(w)}{w === thisWeek ? ` · ${t('השבוע')}` : ''}
+            </option>
+          ))}
+        </select>
       </span>
       <button type="button" className="small" disabled={week >= max} onClick={() => onChange(addDays(week, 7))} aria-label={t('השבוע הבא')}>
         {t('←')}
