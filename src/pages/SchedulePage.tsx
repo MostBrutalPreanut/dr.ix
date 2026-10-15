@@ -8,7 +8,7 @@ import { weekText } from '../lib/rota';
 import type { PublishedWeek, Settings } from '../lib/types';
 import { colorIndexOf, colorStyle } from '../lib/rotaColors';
 import { WeekGrid } from '../components/WeekGrid';
-import { Hours, WeekNav, dayTitle, shiftName } from '../components/ShiftBits';
+import { Hours, WeekNav, dayTitle, shiftName, weekLabel } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
 
 const BACK_WEEKS = 4;
@@ -39,7 +39,20 @@ export default function SchedulePage() {
   const nextPublished = published.items.some((w) => w.id === nextWeek);
   const nameOf = (id: string) => employees.find((e) => e.id === id)?.name ?? '?';
   const days = useMemo(() => current?.days ?? [], [current]);
+  const next = published.items.find((w) => w.id === nextWeek);
   if (!user) return null;
+
+  const gridOf = (w: PublishedWeek) => (
+    <WeekGrid
+      days={w.days}
+      people={employees
+        .filter((e) => w.days.some((d) => d.shifts.some((s) => s.staff.some((x) => x.employeeId === e.id))))
+        .sort((a, b) => Number(b.id === user.id) - Number(a.id === user.id) || a.name.localeCompare(b.name, 'he'))}
+      colorOf={colorOf}
+      meId={user.id}
+      today={today}
+    />
+  );
 
   async function copy() {
     const text = weekText(days, nameOf, (d) => `${Number(d.slice(8))}/${Number(d.slice(5, 7))}`, t('סגור'));
@@ -66,7 +79,7 @@ export default function SchedulePage() {
         <span className="muted">{t('←')}</span>
       </Link>
 
-      {week === thisWeek && nextPublished && (
+      {week === thisWeek && nextPublished && view === 'list' && (
         <button type="button" className="card summary-line has-note wide" onClick={() => setWeek(nextWeek)}>
           <span>{t('הסידור לשבוע הבא פורסם')}</span>
           <span className="muted">{t('←')}</span>
@@ -84,16 +97,13 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {current && view === 'grid' && (
-        <WeekGrid
-          days={days}
-          people={employees
-            .filter((e) => days.some((d) => d.shifts.some((s) => s.staff.some((w) => w.employeeId === e.id))))
-            .sort((a, b) => Number(b.id === user.id) - Number(a.id === user.id) || a.name.localeCompare(b.name, 'he'))}
-          colorOf={colorOf}
-          meId={user.id}
-          today={today}
-        />
+      {current && view === 'grid' && gridOf(current)}
+
+      {view === 'grid' && week === thisWeek && (
+        <>
+          <h2 className="week-sub">{t('שבוע הבא')} <bdi dir="ltr">{weekLabel(nextWeek)}</bdi></h2>
+          {next ? gridOf(next) : <p className="muted small-text">{t('הסידור לשבוע הבא עדיין לא פורסם.')}</p>}
+        </>
       )}
 
       {current && view === 'list' &&

@@ -528,4 +528,6 @@ export const UI: Record<string, string> = {
   "מי ביקש, יום ויום": "Who asked, day by day",
   "לוחצים על שם כדי לשבץ אותו במשמרת (✓ = משובץ). לחיצה נוספת מסירה.": "Tap a name to assign them to the shift (✓ = assigned). Tap again to remove.",
   "אף אחד לא ביקש": "Nobody asked",
+  "שבוע הבא": "Next week",
+  "הסידור לשבוע הבא עדיין לא פורסם.": "Next week's schedule has not been published yet.",
 };

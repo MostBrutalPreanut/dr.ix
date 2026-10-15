@@ -29,7 +29,7 @@ export function WeekGrid({ days, people, colorOf, meId, today, asked, selected, 
       <table className="week-grid">
         <thead>
           <tr>
-            <th scope="col" className="who" />
+            <th scope="col" className="wg-who" />
             {days.map((d) => (
               <th key={d.date} scope="col" className={`${d.date === today ? 'today' : ''}${d.shifts.length === 0 ? ' closed' : ''}`}>
                 <span className="block">{t(WEEKDAY_NAMES[weekdayOf(d.date)])}</span>
@@ -41,8 +41,8 @@ export function WeekGrid({ days, people, colorOf, meId, today, asked, selected, 
         </thead>
         <tbody>
           {people.map((p) => (
-            <tr key={p.id} className={p.id === meId ? 'me' : ''}>
-              <th scope="row" className="who">
+            <tr key={p.id} className={p.id === meId ? 'wg-me' : ''}>
+              <th scope="row" className="wg-who">
                 <span className="dot" style={{ background: colorOf(p.id).background }} aria-hidden="true" />
                 {p.name}
               </th>
