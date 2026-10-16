@@ -534,4 +534,6 @@ export const UI: Record<string, string> = {
   "← חזרה לעריכה": "← Back to editing",
   "👁️ צפייה מוקדמת": "👁️ Preview",
   "כך העובדים יראו את השבוע: בלי בקשות ובלי מי שלא שובץ.": "This is how the team will see the week: no requests, and nobody without a shift.",
+  "🧹 משימות להיום": "🧹 Today's tasks",
+  "לבדיקה היום": "To check today",
 };

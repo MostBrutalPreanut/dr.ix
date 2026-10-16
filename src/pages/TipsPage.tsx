@@ -37,9 +37,7 @@ function DayNav({ date, today, back, onChange }: { date: string; today: string; 
   return (
     <div className="row between">
       <button type="button" className="small" disabled={date <= addDays(today, -back)} onClick={() => onChange(addDays(date, -1))} aria-label={t('היום הקודם')}>{t('→')}</button>
-      <strong>
-        {t('יום {day}', { day: t(WEEKDAY_NAMES[weekdayOf(date)]) })} · {formatLongDate(date)}
-      </strong>
+      <strong>{formatLongDate(date)}</strong>
       <button type="button" className="small" disabled={date >= today} onClick={() => onChange(addDays(date, 1))} aria-label={t('היום הבא')}>{t('←')}</button>
     </div>
   );
