@@ -164,8 +164,8 @@ export interface Settings extends Doc {
   biweeklyAnchor: string;
   /** First day the app was in use - tasks before it are never shown as late. */
   startDate?: string;
-  /** colour (palette index) of each person in the work schedule, by employee id */
-  rotaColors?: Record<string, number>;
+  /** colour of each person (palette index, or "#rrggbb" when picked) in the work schedule, by employee id */
+  rotaColors?: Record<string, number | string>;
 }
 
 // ---------- inventory ----------

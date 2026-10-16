@@ -6,12 +6,13 @@ import { addDays, formatLongDate, weekStart } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { weekText } from '../lib/rota';
 import type { PublishedWeek, Settings } from '../lib/types';
-import { colorIndexOf, colorStyle } from '../lib/rotaColors';
+import { personColor } from '../lib/rotaColors';
 import { WeekGrid } from '../components/WeekGrid';
+import { renderWeekImage, shareOrDownload } from '../lib/rotaImage';
 import { Hours, WeekNav, dayTitle, shiftName, weekLabel } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
 
-const BACK_WEEKS = 4;
+const BACK_WEEKS = 12;
 const FORWARD_WEEKS = 12;
 
 /** The published work schedule: everybody sees it, the signed-in person's own shifts are highlighted. */
@@ -26,7 +27,7 @@ export default function SchedulePage() {
   const published = useCollection<PublishedWeek>('schedulePublished', undefined, { from: min, to: max });
   const [copied, setCopied] = useState(false);
   const settings = useCollection<Settings>('settings');
-  const colorOf = (id: string) => colorStyle(colorIndexOf(id, settings.items[0]?.rotaColors));
+  const colorOf = (id: string) => personColor(id, settings.items[0]?.rotaColors);
   const [view, setViewState] = useState<'grid' | 'list'>(() => {
     try { return localStorage.getItem('drix:rotaView') === 'list' ? 'list' : 'grid'; } catch { return 'grid'; }
   });
@@ -144,6 +145,11 @@ export default function SchedulePage() {
           {isManager && (
             <button type="button" className="small" onClick={() => void copy()}>
               {copied ? t('✓ הועתק') : t('העתק לוואטסאפ')}
+            </button>
+          )}
+          {isManager && (
+            <button type="button" className="small" onClick={() => void renderWeekImage(days, colorOf, nameOf).then((b) => shareOrDownload(b, `rota-${week}.png`)).catch(() => undefined)}>
+              {t('🖼️ ייצוא כתמונה')}
             </button>
           )}
         </div>

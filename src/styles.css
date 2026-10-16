@@ -1305,3 +1305,19 @@ h2.week-sub {
   margin: 1rem 0 0;
   font-size: 1.1rem;
 }
+select.week-select {
+  width: auto;
+  max-width: 100%;
+  font-weight: 700;
+  text-align: center;
+}
+input[type='color'].color-pick {
+  width: 3rem;
+  height: 2rem;
+  min-height: 0;
+  padding: 0.1rem;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
