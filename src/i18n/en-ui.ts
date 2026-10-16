@@ -536,4 +536,6 @@ export const UI: Record<string, string> = {
   "כך העובדים יראו את השבוע: בלי בקשות ובלי מי שלא שובץ.": "This is how the team will see the week: no requests, and nobody without a shift.",
   "🧹 משימות להיום": "🧹 Today's tasks",
   "לבדיקה היום": "To check today",
+  "🖼️ ייצוא כתמונה": "🖼️ Export as image",
+  "משמרת": "Shift",
 };

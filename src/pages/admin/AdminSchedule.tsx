@@ -9,6 +9,7 @@ import type { PublishedDay, PublishedWeek, Settings, ShiftAssignment, ShiftDay, 
 import type { SavedColor } from '../../lib/rotaColors';
 import { fillColors, hexOf, personColor } from '../../lib/rotaColors';
 import { WeekGrid } from '../../components/WeekGrid';
+import { renderWeekImage, shareOrDownload } from '../../lib/rotaImage';
 import { Hours, WeekNav, dayTitle, shiftName } from '../../components/ShiftBits';
 import { pruneEn, t, tl } from '../../lib/i18n';
 import { seedSettings } from '../../seed/tasks';
@@ -469,12 +470,16 @@ function GridBuilder({ draft, today, people, colorOf, hexOf, onColor, asked, req
   const person = cell ? people.find((p) => p.id === cell.employeeId) : undefined;
   const cellShifts = cell ? shiftsOf(cell.date) : [];
   const total = (date: string) => draft.find((d) => d.date === date)?.shifts.reduce((n, s) => n + s.staff.length, 0) ?? 0;
+  const exportImage = () => renderWeekImage(draft, colorOf, nameOf).then((b) => shareOrDownload(b, `rota-${draft[0].date}.png`)).catch(() => undefined);
   const working = people.filter((p) => draft.some((d) => d.shifts.some((sh) => sh.staff.some((w) => w.employeeId === p.id))));
   return (
     <>
-      <button type="button" className={`chip pick${preview ? ' on' : ''}`} aria-pressed={preview} onClick={() => setPreview(!preview)}>
-        {preview ? t('← חזרה לעריכה') : t('👁️ צפייה מוקדמת')}
-      </button>
+      <div className="row">
+        <button type="button" className={`chip pick${preview ? ' on' : ''}`} aria-pressed={preview} onClick={() => setPreview(!preview)}>
+          {preview ? t('← חזרה לעריכה') : t('👁️ צפייה מוקדמת')}
+        </button>
+        <button type="button" className="chip pick" onClick={() => void exportImage()}>{t('🖼️ ייצוא כתמונה')}</button>
+      </div>
       {preview && (
         <>
           <p className="muted small-text">{t('כך העובדים יראו את השבוע: בלי בקשות ובלי מי שלא שובץ.')}</p>

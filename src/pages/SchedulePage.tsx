@@ -8,6 +8,7 @@ import { weekText } from '../lib/rota';
 import type { PublishedWeek, Settings } from '../lib/types';
 import { personColor } from '../lib/rotaColors';
 import { WeekGrid } from '../components/WeekGrid';
+import { renderWeekImage, shareOrDownload } from '../lib/rotaImage';
 import { Hours, WeekNav, dayTitle, shiftName, weekLabel } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
 
@@ -144,6 +145,11 @@ export default function SchedulePage() {
           {isManager && (
             <button type="button" className="small" onClick={() => void copy()}>
               {copied ? t('✓ הועתק') : t('העתק לוואטסאפ')}
+            </button>
+          )}
+          {isManager && (
+            <button type="button" className="small" onClick={() => void renderWeekImage(days, colorOf, nameOf).then((b) => shareOrDownload(b, `rota-${week}.png`)).catch(() => undefined)}>
+              {t('🖼️ ייצוא כתמונה')}
             </button>
           )}
         </div>
