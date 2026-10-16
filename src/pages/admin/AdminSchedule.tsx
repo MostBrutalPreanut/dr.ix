@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { backend, idPrefix, newId, useCollection } from '../../lib/db';
@@ -6,7 +6,8 @@ import { addDays, formatLongDate, weekStart } from '../../lib/dates';
 import { useBusinessDate } from '../../lib/useBusinessDate';
 import { MAX_STAFF, START_CHOICES, assignmentId, buildWeek, byOrder, effectiveShifts, hasUnpublishedChanges, isTime, requestKey, templateShifts } from '../../lib/rota';
 import type { PublishedDay, PublishedWeek, Settings, ShiftAssignment, ShiftDay, ShiftDef, ShiftRequest } from '../../lib/types';
-import { PALETTE_SIZE, colorIndexOf, colorStyle, fillColors } from '../../lib/rotaColors';
+import type { SavedColor } from '../../lib/rotaColors';
+import { fillColors, hexOf, personColor } from '../../lib/rotaColors';
 import { WeekGrid } from '../../components/WeekGrid';
 import { Hours, WeekNav, dayTitle, shiftName } from '../../components/ShiftBits';
 import { pruneEn, t, tl } from '../../lib/i18n';
@@ -43,8 +44,8 @@ export default function AdminSchedule() {
 
   const settings = useCollection<Settings>('settings', seedSettings);
   const saved = settings.items[0]?.rotaColors;
-  const colorOf = (id: string) => colorStyle(colorIndexOf(id, saved));
-  const saveColors = (rotaColors: Record<string, number>) =>
+  const colorOf = (id: string) => personColor(id, saved);
+  const saveColors = (rotaColors: Record<string, SavedColor>) =>
     settings.save({ ...(settings.items[0] ?? { id: 'settings', biweeklyAnchor: today }), rotaColors });
   // everybody gets a fixed colour of their own the first time (so nobody's colour moves when others join or leave)
   useEffect(() => {
@@ -156,8 +157,8 @@ export default function AdminSchedule() {
           today={today}
           people={[...employees].sort((a, b) => a.name.localeCompare(b.name, 'he'))}
           colorOf={colorOf}
-          colorIndex={(id) => colorIndexOf(id, saved)}
-          onColor={(id, i) => guard(() => saveColors({ ...fillColors(employees, saved), [id]: i % PALETTE_SIZE }))}
+          hexOf={(id) => hexOf(id, saved)}
+          onColor={(id, hex) => guard(() => saveColors({ ...fillColors(employees, saved), [id]: hex }))}
           asked={askedSet}
           requests={requests.items}
           nameOf={nameOf}
@@ -441,13 +442,13 @@ function EventsSection({ today, events, onAdd, onRemove, onGo }: {
 }
 
 /** The colour-coded week table with a small editor for the tapped cell (person + day). */
-function GridBuilder({ draft, today, people, colorOf, colorIndex, onColor, asked, requests, nameOf, cell, onCell, onClose, shiftsOf, docs, onAssign, onUnassign, onStart, editDay, onEditDay, dayEditor }: {
+function GridBuilder({ draft, today, people, colorOf, hexOf, onColor, asked, requests, nameOf, cell, onCell, onClose, shiftsOf, docs, onAssign, onUnassign, onStart, editDay, onEditDay, dayEditor }: {
   draft: PublishedDay[];
   today: string;
   people: { id: string; name: string }[];
   colorOf(id: string): { background: string; color: string };
-  colorIndex(id: string): number;
-  onColor(id: string, index: number): void;
+  hexOf(id: string): string;
+  onColor(id: string, hex: string): void;
   asked: Set<string>;
   requests: ShiftRequest[];
   nameOf(id: string): string;
@@ -547,11 +548,11 @@ function GridBuilder({ draft, today, people, colorOf, colorIndex, onColor, asked
       {editDay && dayEditor(editDay)}
       {colors && (
         <section className="card">
-          <p className="muted small-text">{t('לחיצה על העיגול מחליפה צבע.')}</p>
+          <p className="muted small-text">{t('לוחצים על הריבוע ליד השם ובוחרים צבע.')}</p>
           {people.map((p) => (
             <div key={p.id} className="staff-line">
               <span>{p.name}</span>
-              <button type="button" className="swatch" style={{ background: colorOf(p.id).background }} aria-label={t('החלף צבע')} onClick={() => onColor(p.id, colorIndex(p.id) + 1)} />
+              <ColorPick value={hexOf(p.id)} onPick={(hex) => onColor(p.id, hex)} />
             </div>
           ))}
         </section>
@@ -561,3 +562,26 @@ function GridBuilder({ draft, today, people, colorOf, colorIndex, onColor, asked
 }
 
 const formatShort = (date: string) => `${Number(date.slice(8))}/${Number(date.slice(5, 7))}`;
+
+/** Colour input that saves once the person stops dragging (the picker fires continuously on desktop). */
+function ColorPick({ value, onPick }: { value: string; onPick(hex: string): void }) {
+  const [local, setLocal] = useState(value);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+  return (
+    <input
+      type="color"
+      className="color-pick"
+      value={local}
+      aria-label={t('בחירת צבע')}
+      onChange={(e) => {
+        const hex = e.target.value;
+        setLocal(hex);
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => onPick(hex), 400);
+      }}
+    />
+  );
+}

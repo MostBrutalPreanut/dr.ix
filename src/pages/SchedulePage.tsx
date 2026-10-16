@@ -6,7 +6,7 @@ import { addDays, formatLongDate, weekStart } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { weekText } from '../lib/rota';
 import type { PublishedWeek, Settings } from '../lib/types';
-import { colorIndexOf, colorStyle } from '../lib/rotaColors';
+import { personColor } from '../lib/rotaColors';
 import { WeekGrid } from '../components/WeekGrid';
 import { Hours, WeekNav, dayTitle, shiftName, weekLabel } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
@@ -26,7 +26,7 @@ export default function SchedulePage() {
   const published = useCollection<PublishedWeek>('schedulePublished', undefined, { from: min, to: max });
   const [copied, setCopied] = useState(false);
   const settings = useCollection<Settings>('settings');
-  const colorOf = (id: string) => colorStyle(colorIndexOf(id, settings.items[0]?.rotaColors));
+  const colorOf = (id: string) => personColor(id, settings.items[0]?.rotaColors);
   const [view, setViewState] = useState<'grid' | 'list'>(() => {
     try { return localStorage.getItem('drix:rotaView') === 'list' ? 'list' : 'grid'; } catch { return 'grid'; }
   });
