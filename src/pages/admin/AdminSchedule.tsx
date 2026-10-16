@@ -465,11 +465,23 @@ function GridBuilder({ draft, today, people, colorOf, hexOf, onColor, asked, req
   dayEditor(date: string): React.ReactNode;
 }) {
   const [colors, setColors] = useState(false);
+  const [preview, setPreview] = useState(false);
   const person = cell ? people.find((p) => p.id === cell.employeeId) : undefined;
   const cellShifts = cell ? shiftsOf(cell.date) : [];
   const total = (date: string) => draft.find((d) => d.date === date)?.shifts.reduce((n, s) => n + s.staff.length, 0) ?? 0;
+  const working = people.filter((p) => draft.some((d) => d.shifts.some((sh) => sh.staff.some((w) => w.employeeId === p.id))));
   return (
     <>
+      <button type="button" className={`chip pick${preview ? ' on' : ''}`} aria-pressed={preview} onClick={() => setPreview(!preview)}>
+        {preview ? t('← חזרה לעריכה') : t('👁️ צפייה מוקדמת')}
+      </button>
+      {preview && (
+        <>
+          <p className="muted small-text">{t('כך העובדים יראו את השבוע: בלי בקשות ובלי מי שלא שובץ.')}</p>
+          <WeekGrid days={draft} people={working} colorOf={colorOf} today={today} />
+        </>
+      )}
+      {!preview && <>
       <section className="card">
         <h3>{t('מי ביקש, יום ויום')}</h3>
         <p className="muted small-text">{t('לוחצים על שם כדי לשבץ אותו במשמרת (✓ = משובץ). לחיצה נוספת מסירה.')}</p>
@@ -557,6 +569,7 @@ function GridBuilder({ draft, today, people, colorOf, hexOf, onColor, asked, req
           ))}
         </section>
       )}
+      </>}
     </>
   );
 }

@@ -531,4 +531,7 @@ export const UI: Record<string, string> = {
   "שבוע הבא": "Next week",
   "הסידור לשבוע הבא עדיין לא פורסם.": "Next week's schedule has not been published yet.",
   "בחירת שבוע": "Choose a week",
+  "← חזרה לעריכה": "← Back to editing",
+  "👁️ צפייה מוקדמת": "👁️ Preview",
+  "כך העובדים יראו את השבוע: בלי בקשות ובלי מי שלא שובץ.": "This is how the team will see the week: no requests, and nobody without a shift.",
 };
