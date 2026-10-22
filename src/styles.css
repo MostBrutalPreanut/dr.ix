@@ -1158,7 +1158,8 @@ a.stock-task {
   background: var(--soft);
 }
 .staff-line.me {
-  outline: 3px solid var(--yellow);
+  background: var(--blue);
+  color: var(--on-accent);
   font-weight: 700;
 }
 .start-time {
@@ -1189,42 +1190,134 @@ button.chip.pick.asked {
   }
 }
 
-.color-row {
+/* work schedule: colour-coded week table */
+.week-grid-wrap {
+  overflow-x: auto;
+  margin: 0.6rem 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card, transparent);
+}
+.week-grid {
+  border-collapse: separate;
+  border-spacing: 2px;
+  width: 100%;
+  min-width: 29rem;
+  font-size: 0.85rem;
+}
+.week-grid th,
+.week-grid td {
+  padding: 0;
+  text-align: center;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.week-grid thead th {
+  padding: 0.3rem 0.1rem;
+  line-height: 1.2;
+}
+.week-grid thead th.today {
+  color: var(--yellow);
+}
+.week-grid thead th.closed {
+  opacity: 0.5;
+}
+.week-grid th.wg-who {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  min-width: 5.2rem;
+  text-align: start;
+  padding: 0.3rem 0.4rem;
+  background: var(--bg, #fff);
+  white-space: nowrap;
+}
+.week-grid tr.wg-me th.wg-who {
+  color: var(--blue);
+}
+.week-grid .dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  margin-inline-end: 0.35rem;
+}
+.week-grid .cell {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--line);
-}
-.color-row:last-child {
-  border-bottom: 0;
-}
-.color-name {
-  align-self: flex-start;
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-.swatches {
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  min-height: 2.4rem;
+  border-radius: 6px;
 }
-button.swatch {
-  width: 32px;
-  height: 32px;
-  min-height: 0;
-  padding: 0;
-  border-radius: 50%;
-  border: 2px solid transparent;
+.week-grid .cell.off {
+  background: var(--soft);
+  color: var(--muted, #888);
+  font-weight: 400;
 }
-button.swatch.on {
-  border-color: var(--ink);
+.week-grid .cell.off.asked {
+  outline: 2px solid var(--yellow);
+  outline-offset: -2px;
 }
-input.color-input {
-  width: 40px;
-  height: 36px;
+.week-grid .cell-btn {
+  display: block;
+  width: 100%;
   padding: 0;
   border: 0;
   background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.week-grid td.sel .cell {
+  outline: 3px solid var(--blue);
+  outline-offset: 1px;
+}
+.cell-editor {
+  margin: 0.4rem 0;
+}
+.name-dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  margin-inline-end: 0.35rem;
+  vertical-align: baseline;
+}
+button.swatch {
+  width: 1.6rem;
+  height: 1.6rem;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+}
+.view-toggle {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+input.day-remark {
+  margin-top: 0.4rem;
+  width: 100%;
+}
+h2.week-sub {
+  margin: 1rem 0 0;
+  font-size: 1.1rem;
+}
+select.week-select {
+  width: auto;
+  max-width: 100%;
+  font-weight: 700;
+  text-align: center;
+}
+input[type='color'].color-pick {
+  width: 3rem;
+  height: 2rem;
+  min-height: 0;
+  padding: 0.1rem;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
 }

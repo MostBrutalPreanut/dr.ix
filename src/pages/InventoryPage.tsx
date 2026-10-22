@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { backend, useCollection } from '../lib/db';
 import { useBusinessDate } from '../lib/useBusinessDate';
-import { WEEKDAY_NAMES, addDays, formatLongDate, weekdayOf } from '../lib/dates';
+import { addDays, formatLongDate, weekdayOf } from '../lib/dates';
 import { catLabel, categoriesOf, formatRestockList, isDueOn, itemsOfCategory, latestReports, levelOf, restockList } from '../lib/inventory';
 import { shrinkImage } from '../lib/image';
 import { LEVEL_LABEL } from '../lib/types';
@@ -108,7 +108,7 @@ export default function InventoryPage() {
 
           <div className="section-head">
             <h2>
-              {showAll ? t('כל הפריטים') : t('לבדיקה היום (יום {p1})', { p1: t(WEEKDAY_NAMES[weekday]) })}
+              {showAll ? t('כל הפריטים') : t('לבדיקה היום')}
               {!showAll && due.length > 0 && <span className="muted small-text"> · {doneCount}/{due.length}</span>}
             </h2>
             <button type="button" className="small" onClick={() => setShowAll(!showAll)}>

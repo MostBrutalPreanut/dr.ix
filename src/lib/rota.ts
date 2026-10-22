@@ -2,8 +2,12 @@ import type { PublishedDay, PublishedShift, ShiftAssignment, ShiftDay, ShiftDef 
 import { WEEKDAY_NAMES, addDays, weekdayOf } from './dates';
 import { tn } from './i18n';
 
-/** The most people that fit in one shift. */
-export const MAX_STAFF = 4;
+/** Largest "planned people" number offered for a shift. It is only a target: more people can always be added. */
+export const MAX_STAFF = 8;
+
+/** Keeps the order a manager added people in; older rows without it fall back to start time, then name. */
+export const byOrder = (a: Pick<ShiftAssignment, 'order' | 'start' | 'employeeId'>, b: Pick<ShiftAssignment, 'order' | 'start' | 'employeeId'>) =>
+  (a.order ?? 0) - (b.order ?? 0) || a.start.localeCompare(b.start) || a.employeeId.localeCompare(b.employeeId);
 
 const EVENING: ShiftDef = { id: 'eve', label: tn('ערב'), from: '17:30', to: '00:00', defaultStart: '17:00', max: MAX_STAFF };
 const SAT_NOON: ShiftDef = { id: 'noon', label: tn('צהריים'), from: '11:00', to: '17:00', defaultStart: '11:00', max: MAX_STAFF };
@@ -38,9 +42,8 @@ export function buildWeek(weekStart: string, days: ShiftDay[], assignments: Shif
       ...s,
       staff: assignments
         .filter((a) => a.date === date && a.shiftId === s.id && isEmployee(a.employeeId))
-        .map((a) => ({ employeeId: a.employeeId, start: a.start }))
-        .sort((a, b) => a.start.localeCompare(b.start) || a.employeeId.localeCompare(b.employeeId))
-        .slice(0, s.max),
+        .sort(byOrder)
+        .map((a) => ({ employeeId: a.employeeId, start: a.start })),
     }));
     const out: PublishedDay = { date, shifts };
     if (day?.note) out.note = day.note;
@@ -81,7 +84,7 @@ export const shortDate = (date: string) => `${Number(date.slice(8))}.${Number(da
  */
 export function dayHeading(d: PublishedDay): string {
   const parts = [...d.shifts.filter((s) => s.event).map((s) => s.label), ...(d.note ? [d.note] : [])];
-  return [WEEKDAY_NAMES[weekdayOf(d.date)], shortDate(d.date), ...[...new Set(parts)]].join(' ');
+  return [WEEKDAY_NAMES[weekdayOf(d.date)], shortDate(d.date), ...new Set(parts)].join(' ');
 }
 
 /** Days that appear in the export: closed days without an event or note are left out. */
@@ -100,25 +103,4 @@ export function weekText(days: PublishedDay[], nameOf: (id: string) => string): 
     lines.push('');
   }
   return lines.join('\n').trim();
-}
-
-// ---------- worker colors ----------
-
-/** Colors offered as quick choices (the pastel set of the manager's spreadsheet). */
-export const COLOR_PALETTE = ['#6aa84f', '#ea9999', '#b4a7d6', '#ff9900', '#f6b26b', '#a4c2f4', '#ffe599', '#76a5af', '#d5a6bd', '#93c47d'];
-
-export const isHexColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
-
-/** A color for somebody who was never given one (stable per person). */
-export function defaultColor(employeeId: string): string {
-  let h = 0;
-  for (const ch of employeeId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return COLOR_PALETTE[h % COLOR_PALETTE.length];
-}
-
-/** Black or white text, whichever reads better on the color. */
-export function textOn(color: string): string {
-  const n = parseInt(color.slice(1), 16);
-  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  return lum > 0.6 ? '#111' : '#fff';
 }

@@ -1,7 +1,6 @@
 import { formatLongDate, weekStart, addDays } from '../lib/dates';
-import { useCollection } from '../lib/db';
-import { defaultColor, hoursOf, isHexColor, textOn } from '../lib/rota';
-import type { ShiftDef, StaffColors } from '../lib/types';
+import { hoursOf } from '../lib/rota';
+import type { ShiftDef } from '../lib/types';
 import { t, tl } from '../lib/i18n';
 
 /** Times and ranges always read left-to-right, also inside Hebrew text. */
@@ -21,14 +20,25 @@ export function weekLabel(ws: string): string {
 
 export function WeekNav({ week, min, max, onChange, current }: { week: string; min: string; max: string; onChange(w: string): void; current?: string }) {
   const thisWeek = current ?? weekStart(week);
+  // newest first: a few weeks ahead, then back in time (the arrows still reach every other week)
+  const top = [addDays(thisWeek, 21), max].sort()[0];
+  const options: string[] = [];
+  for (let w = top; w >= min; w = addDays(w, -7)) options.push(w);
+  if (!options.includes(week)) options.unshift(week);
+  options.sort().reverse();
   return (
     <div className="row between week-nav">
       <button type="button" className="small" disabled={week <= min} onClick={() => onChange(addDays(week, -7))} aria-label={t('השבוע הקודם')}>
         {t('→')}
       </button>
       <span className="week-title">
-        <strong>{t('שבוע')} <bdi dir="ltr">{weekLabel(week)}</bdi></strong>
-        {week === thisWeek && <span className="chip soft">{t('השבוע')}</span>}
+        <select className="week-select" value={week} aria-label={t('בחירת שבוע')} onChange={(e) => onChange(e.target.value)}>
+          {options.map((w) => (
+            <option key={w} value={w}>
+              {t('שבוע')} {weekLabel(w)}{w === thisWeek ? ` · ${t('השבוע')}` : ''}
+            </option>
+          ))}
+        </select>
       </span>
       <button type="button" className="small" disabled={week >= max} onClick={() => onChange(addDays(week, 7))} aria-label={t('השבוע הבא')}>
         {t('←')}
@@ -38,26 +48,3 @@ export function WeekNav({ week, min, max, onChange, current }: { week: string; m
 }
 
 export const dayTitle = (date: string) => formatLongDate(date);
-
-const COLORS_ID = 'colors';
-
-/** The color of each worker: the one a manager picked, else a stable default. */
-export function useStaffColors() {
-  const doc = useCollection<StaffColors>('shiftDays', undefined, { from: COLORS_ID, to: COLORS_ID });
-  const map = doc.items[0]?.colors ?? {};
-  const colorOf = (id: string) => (isHexColor(map[id]) ? map[id] : defaultColor(id));
-  const write = (colors: Record<string, string>) => doc.save({ id: COLORS_ID, colors });
-  return {
-    colorOf,
-    picked: (id: string) => isHexColor(map[id]),
-    setColor: (id: string, color: string) => write({ ...map, [id]: color }),
-    resetColor: (id: string) => {
-      const next = { ...map };
-      delete next[id];
-      return write(next);
-    },
-  };
-}
-
-/** Inline style of a worker's tag: their color as background, readable text on top. */
-export const tagStyle = (color: string) => ({ background: color, color: textOn(color) });

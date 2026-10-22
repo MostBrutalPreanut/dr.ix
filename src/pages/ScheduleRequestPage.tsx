@@ -45,6 +45,7 @@ function RequestForm({ week, days, existing, published, save }: { week: string; 
   const { user } = useAuth();
   const [picked, setPicked] = useState<string[]>(existing?.shifts ?? []);
   const [note, setNote] = useState(existing?.note ?? '');
+  const [dayNotes, setDayNotes] = useState<Record<string, string>>(existing?.dayNotes ?? {});
   const [saved, setSaved] = useState(Boolean(existing));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -71,6 +72,8 @@ function RequestForm({ week, days, existing, published, save }: { week: string; 
     try {
       const doc: ShiftRequest = { id: `${week}|${user!.id}`, weekStart: week, employeeId: user!.id, shifts: effective, at: new Date().toISOString() };
       if (note.trim()) doc.note = note.trim();
+      const kept = Object.fromEntries(Object.entries(dayNotes).filter(([date, v]) => v.trim() && plan.some((d) => d.date === date)).map(([date, v]) => [date, v.trim()]));
+      if (Object.keys(kept).length > 0) doc.dayNotes = kept;
       await save(doc);
       setSaved(true);
       setError('');
@@ -100,6 +103,16 @@ function RequestForm({ week, days, existing, published, save }: { week: string; 
               );
             })}
           </div>
+          {d.shifts.length > 0 && (
+            <input
+              className="day-remark"
+              value={dayNotes[d.date] ?? ''}
+              maxLength={200}
+              placeholder={t('הערה ליום הזה (לא חובה), למשל: רק עד 22:00')}
+              aria-label={t('הערה ליום הזה')}
+              onChange={(e) => { setDayNotes({ ...dayNotes, [d.date]: e.target.value }); setSaved(false); }}
+            />
+          )}
         </article>
       ))}
 

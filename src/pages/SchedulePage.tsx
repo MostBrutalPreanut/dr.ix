@@ -5,12 +5,14 @@ import { useCollection } from '../lib/db';
 import { addDays, formatLongDate, weekStart } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { weekText } from '../lib/rota';
-import { renderWeekImage } from '../lib/rotaImage';
-import type { PublishedWeek } from '../lib/types';
-import { Hours, WeekNav, dayTitle, shiftName, tagStyle, useStaffColors } from '../components/ShiftBits';
+import type { PublishedWeek, Settings } from '../lib/types';
+import { personColor } from '../lib/rotaColors';
+import { WeekGrid } from '../components/WeekGrid';
+import { renderWeekImage, shareOrDownload } from '../lib/rotaImage';
+import { Hours, WeekNav, dayTitle, shiftName, weekLabel } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
 
-const BACK_WEEKS = 4;
+const BACK_WEEKS = 12;
 const FORWARD_WEEKS = 12;
 
 /** The published work schedule: everybody sees it, the signed-in person's own shifts are highlighted. */
@@ -24,15 +26,35 @@ export default function SchedulePage() {
   const [week, setWeek] = useState(thisWeek);
   const published = useCollection<PublishedWeek>('schedulePublished', undefined, { from: min, to: max });
   const [copied, setCopied] = useState(false);
-  const colors = useStaffColors();
+  const settings = useCollection<Settings>('settings');
+  const colorOf = (id: string) => personColor(id, settings.items[0]?.rotaColors);
+  const [view, setViewState] = useState<'grid' | 'list'>(() => {
+    try { return localStorage.getItem('drix:rotaView') === 'list' ? 'list' : 'grid'; } catch { return 'grid'; }
+  });
+  const setView = (v: 'grid' | 'list') => {
+    setViewState(v);
+    try { localStorage.setItem('drix:rotaView', v); } catch { /* not important */ }
+  };
 
   const current = published.items.find((w) => w.id === week);
   const nextPublished = published.items.some((w) => w.id === nextWeek);
   const nameOf = (id: string) => employees.find((e) => e.id === id)?.name ?? '?';
   const days = useMemo(() => current?.days ?? [], [current]);
+  const next = published.items.find((w) => w.id === nextWeek);
   if (!user) return null;
 
-  // the export is always Hebrew, whatever the language of the app
+  const gridOf = (w: PublishedWeek) => (
+    <WeekGrid
+      days={w.days}
+      people={employees
+        .filter((e) => w.days.some((d) => d.shifts.some((s) => s.staff.some((x) => x.employeeId === e.id))))
+        .sort((a, b) => Number(b.id === user.id) - Number(a.id === user.id) || a.name.localeCompare(b.name, 'he'))}
+      colorOf={colorOf}
+      meId={user.id}
+      today={today}
+    />
+  );
+
   async function copy() {
     const text = weekText(days, nameOf);
     try {
@@ -42,24 +64,6 @@ export default function SchedulePage() {
     } catch {
       window.prompt(t('העתיקו את הסידור:'), text);
     }
-  }
-
-  async function saveImage() {
-    const blob = await renderWeekImage(days, nameOf, colors.colorOf);
-    const file = new File([blob], `סידור-${week}.png`, { type: 'image/png' });
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file] });
-        return;
-      } catch {
-        /* cancelled: nothing to do */
-      }
-    }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = file.name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   }
 
   return (
@@ -76,7 +80,7 @@ export default function SchedulePage() {
         <span className="muted">{t('←')}</span>
       </Link>
 
-      {week === thisWeek && nextPublished && (
+      {week === thisWeek && nextPublished && view === 'list' && (
         <button type="button" className="card summary-line has-note wide" onClick={() => setWeek(nextWeek)}>
           <span>{t('הסידור לשבוע הבא פורסם')}</span>
           <span className="muted">{t('←')}</span>
@@ -87,7 +91,23 @@ export default function SchedulePage() {
 
       {!current && !published.loading && <p className="muted empty">{t('הסידור לשבוע הזה עדיין לא פורסם.')}</p>}
 
-      {current &&
+      {current && (
+        <div className="view-toggle" role="group" aria-label={t('תצוגה')}>
+          <button type="button" className={`chip pick${view === 'grid' ? ' on' : ''}`} aria-pressed={view === 'grid'} onClick={() => setView('grid')}>{t('🎨 טבלה צבעונית')}</button>
+          <button type="button" className={`chip pick${view === 'list' ? ' on' : ''}`} aria-pressed={view === 'list'} onClick={() => setView('list')}>{t('📋 רשימה לפי ימים')}</button>
+        </div>
+      )}
+
+      {current && view === 'grid' && gridOf(current)}
+
+      {view === 'grid' && week === thisWeek && (
+        <>
+          <h2 className="week-sub">{t('שבוע הבא')} <bdi dir="ltr">{weekLabel(nextWeek)}</bdi></h2>
+          {next ? gridOf(next) : <p className="muted small-text">{t('הסידור לשבוע הבא עדיין לא פורסם.')}</p>}
+        </>
+      )}
+
+      {current && view === 'list' &&
         days.map((d) => {
           const mine = d.shifts.some((s) => s.staff.some((w) => w.employeeId === user.id));
           return (
@@ -108,8 +128,8 @@ export default function SchedulePage() {
                   </div>
                   {s.staff.length === 0 && <p className="muted small-text">{t('עדיין לא שובצו עובדים')}</p>}
                   {s.staff.map((w) => (
-                    <div key={w.employeeId} className={`staff-line${w.employeeId === user.id ? ' me' : ''}`} style={tagStyle(colors.colorOf(w.employeeId))}>
-                      <span>{nameOf(w.employeeId)}</span>
+                    <div key={w.employeeId} className={`staff-line${w.employeeId === user.id ? ' me' : ''}`}>
+                      <span><span className="name-dot" style={colorOf(w.employeeId)} aria-hidden="true" />{nameOf(w.employeeId)}</span>
                       <bdi dir="ltr" className="start-time">{w.start}</bdi>
                     </div>
                   ))}
@@ -128,8 +148,8 @@ export default function SchedulePage() {
             </button>
           )}
           {isManager && (
-            <button type="button" className="small" onClick={() => void saveImage()}>
-              {t('שמור כתמונה')}
+            <button type="button" className="small" onClick={() => void renderWeekImage(days, colorOf, nameOf).then((b) => shareOrDownload(b, `rota-${week}.png`)).catch(() => undefined)}>
+              {t('🖼️ ייצוא כתמונה')}
             </button>
           )}
         </div>

@@ -164,6 +164,8 @@ export interface Settings extends Doc {
   biweeklyAnchor: string;
   /** First day the app was in use - tasks before it are never shown as late. */
   startDate?: string;
+  /** colour of each person (palette index, or "#rrggbb" when picked) in the work schedule, by employee id */
+  rotaColors?: Record<string, number | string>;
 }
 
 // ---------- inventory ----------
@@ -237,6 +239,8 @@ export interface InventoryPhoto extends Doc {
 export interface TipEntry extends Doc {
   date: string;
   amount: number;
+  /** free note from whoever entered it (managers read it) */
+  note?: string;
   by: string;
   at: string;
 }
@@ -286,6 +290,8 @@ export interface ShiftAssignment extends Doc {
   shiftId: string;
   employeeId: string;
   start: string;
+  /** order the manager added the person in (the list keeps this order, not the start time) */
+  order?: number;
 }
 
 export interface PublishedShift extends ShiftDef {
@@ -313,14 +319,7 @@ export interface ShiftRequest extends Doc {
   employeeId: string;
   shifts: string[];
   note?: string;
+  /** per-day remarks, by date (e.g. "only until 22:00") */
+  dayNotes?: Record<string, string>;
   at: string;
-}
-
-/**
- * The color of every worker in the schedule (chosen by a manager). One document, id = 'colors'.
- * It lives in the shiftDays collection (readable by all, writable by managers) under an id that
- * is not a date, so it never shows up in a date range.
- */
-export interface StaffColors extends Doc {
-  colors: Record<string, string>;
 }

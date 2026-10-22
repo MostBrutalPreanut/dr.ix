@@ -1,91 +1,101 @@
 import type { PublishedDay } from './types';
-import { dayHeading, exportDays, hoursOf, textOn } from './rota';
+import type { PersonColor } from './rotaColors';
+import { dayHeading, exportDays, hoursOf } from './rota';
 
-const W = 300; // width of one day
-const HEAD = 44;
-const SUB = 34;
 const ROW = 38;
-const SCALE = 2;
-const MIN_BLOCK = 56; // a shift with its hours needs two lines
-const FONT = "'Heebo', 'Arial Hebrew', Arial, sans-serif";
+const HEAD = 34;
+const SHIFT_W = 118;
+const STAFF_W = 150;
+const DAY_W = SHIFT_W + STAFF_W;
+const LINE = '#8a8a8a';
+const HEAD_BG = '#b6d7a8';
+const SUB_BG = '#00c853';
+const FONT = 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
 
 /**
- * Draws the week like the manager's spreadsheet: one block per day, read right to left (the first day
- * of the week on the right), heading = weekday + date + event name, then "משמרת | עובדים" with the people
- * and their start times. Always Hebrew.
+ * Draws the week like the colour-coded sheet the team knows: a pair of columns (shift | workers) per day,
+ * each worker in a cell of their own colour. Closed days are left out.
  */
-export function renderWeekImage(days: PublishedDay[], nameOf: (id: string) => string, colorOf: (id: string) => string = () => '#fff'): Promise<Blob> {
-  const shown = exportDays(days);
-  const blockH = (n: number) => Math.max(n * ROW, MIN_BLOCK);
-  const bodyH = (d: PublishedDay) => d.shifts.reduce((h, s) => h + blockH(Math.max(1, s.staff.length)), 0) || ROW;
-  const tall = Math.max(...shown.map(bodyH), 3 * ROW);
-  const width = Math.max(shown.length, 1) * W;
-  const height = HEAD + SUB + tall;
+export function renderWeekImage(days: PublishedDay[], colorOf: (id: string) => PersonColor, nameOf: (id: string) => string): Promise<Blob> {
+  // the export is for the team's WhatsApp: always Hebrew and read right to left, whatever the app language is
+  const open = exportDays(days);
+  const rtl = true;
+  const rowsOf = (d: PublishedDay) => d.shifts.reduce((n, s) => n + Math.max(1, s.staff.length), 0);
+  const bodyRows = Math.max(1, ...open.map(rowsOf));
+  const width = Math.max(1, open.length) * DAY_W;
+  const height = HEAD * 2 + bodyRows * ROW;
+  const scale = 2;
 
   const canvas = document.createElement('canvas');
-  canvas.width = width * SCALE;
-  canvas.height = height * SCALE;
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(SCALE, SCALE);
-  ctx.direction = 'rtl';
-  ctx.textBaseline = 'middle';
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return Promise.reject(new Error('no canvas'));
+  ctx.scale(scale, scale);
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, width, height);
+  ctx.direction = rtl ? 'rtl' : 'ltr';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 1;
 
-  const cell = (x: number, y: number, w: number, h: number, fill: string, text: string, opts: { bold?: boolean; size?: number; color?: string } = {}) => {
+  const cell = (x: number, y: number, w: number, h: number, fill: string, lines: { text: string; color?: string; bold?: boolean; size?: number }[] = []) => {
     ctx.fillStyle = fill;
     ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = '#9aa';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = LINE;
     ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
-    if (!text) return;
-    ctx.fillStyle = opts.color ?? '#000';
-    ctx.font = `${opts.bold ? '700' : '400'} ${opts.size ?? 16}px ${FONT}`;
-    ctx.textAlign = 'center';
-    // shrink long headings (event names) to fit the cell
-    let size = opts.size ?? 16;
-    while (ctx.measureText(text).width > w - 12 && size > 10) {
-      size -= 1;
-      ctx.font = `${opts.bold ? '700' : '400'} ${size}px ${FONT}`;
-    }
-    ctx.fillText(text, x + w / 2, y + h / 2 + 1, w - 8);
+    const lh = 16;
+    lines.forEach((l, i) => {
+      ctx.fillStyle = l.color ?? '#111';
+      ctx.font = `${l.bold ? 'bold ' : ''}${l.size ?? 15}px ${FONT}`;
+      ctx.fillText(l.text, x + w / 2, y + h / 2 + (i - (lines.length - 1) / 2) * lh, w - 8);
+    });
   };
 
-  shown.forEach((d, i) => {
-    // the first day sits at the right edge
-    const x0 = width - (i + 1) * W;
-    cell(x0, 0, W, HEAD, '#b6d7a8', dayHeading(d), { bold: true, size: 19 });
-    cell(x0 + W / 2, HEAD, W / 2, SUB, '#34a853', 'משמרת', { bold: true, size: 15, color: '#fff' }); // right half
-    cell(x0, HEAD, W / 2, SUB, '#34a853', 'עובדים', { bold: true, size: 15, color: '#fff' }); // left half
-    let y = HEAD + SUB;
+  open.forEach((d, i) => {
+    const x = rtl ? width - (i + 1) * DAY_W : i * DAY_W;
+    const shiftX = rtl ? x + STAFF_W : x;
+    const staffX = rtl ? x : x + SHIFT_W;
+    cell(x, 0, DAY_W, HEAD, HEAD_BG, [{ text: dayHeading(d), bold: true, size: 16 }]);
+    cell(shiftX, HEAD, SHIFT_W, HEAD, SUB_BG, [{ text: 'משמרת', bold: true }]);
+    cell(staffX, HEAD, STAFF_W, HEAD, SUB_BG, [{ text: 'עובדים', bold: true }]);
+
+    let row = 0;
     for (const s of d.shifts) {
       const n = Math.max(1, s.staff.length);
-      const h = blockH(n);
-      const rowH = h / n;
-      cell(x0 + W / 2, y, W / 2, h, '#fff', '');
-      const label = s.label;
+      const y = HEAD * 2 + row * ROW;
       const hours = hoursOf(s);
-      ctx.fillStyle = '#000';
-      ctx.textAlign = 'center';
-      ctx.font = `400 16px ${FONT}`;
-      ctx.fillText(label, x0 + W * 0.75, y + h / 2 - (hours ? 10 : 0), W / 2 - 8);
-      if (hours) {
-        ctx.direction = 'ltr';
-        ctx.font = `400 15px ${FONT}`;
-        ctx.fillText(hours, x0 + W * 0.75, y + h / 2 + 11, W / 2 - 8);
-        ctx.direction = 'rtl';
-      }
-      for (let k = 0; k < n; k++) {
-        const w = s.staff[k];
-        const fill = w ? colorOf(w.employeeId) : '#fff';
-        cell(x0, y + k * rowH, W / 2, rowH, fill, w ? `${nameOf(w.employeeId)} ${w.start}` : '', { bold: true, size: 17, color: w ? textOn(fill) : '#000' });
-      }
-      y += h;
+      cell(shiftX, y, SHIFT_W, n * ROW, '#fff', [{ text: s.label }, ...(hours ? [{ text: `\u202A${hours}\u202C`, size: 13 }] : [])]);
+      if (s.staff.length === 0) cell(staffX, y, STAFF_W, ROW, '#fff');
+      s.staff.forEach((w, j) => {
+        const c = colorOf(w.employeeId);
+        cell(staffX, y + j * ROW, STAFF_W, ROW, c.background, [{ text: `${nameOf(w.employeeId)} ${w.start}`, color: c.color, bold: true }]);
+      });
+      row += n;
     }
-    // empty rows below, so every day has the same height
-    for (; y < height; y += ROW) cell(x0, y, W, ROW, '#fff', '');
+    for (; row < bodyRows; row++) {
+      cell(shiftX, HEAD * 2 + row * ROW, SHIFT_W, ROW, '#fff');
+      cell(staffX, HEAD * 2 + row * ROW, STAFF_W, ROW, '#fff');
+    }
   });
 
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('no image'))), 'image/png'));
 }
 
+/** Opens the phone's share sheet (WhatsApp etc.) when possible, otherwise downloads the picture. */
+export async function shareOrDownload(blob: Blob, filename: string): Promise<void> {
+  const file = new File([blob], filename, { type: 'image/png' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return; // the person closed the share sheet
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}

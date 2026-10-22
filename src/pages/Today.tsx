@@ -197,7 +197,7 @@ export default function Today() {
 
       <section>
         <div className="section-head">
-          <h2>{t('🧹 משימות יום {day}', { day: t(WEEKDAY_NAMES[weekdayOf(today)]) })}</h2>
+          <h2>{t('🧹 משימות להיום')}</h2>
           <span className="muted small-text">
             {doneCount}/{taskTotal}
           </span>
