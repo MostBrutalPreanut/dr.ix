@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth';
 import { useCollection } from '../lib/db';
 import { addDays, formatLongDate, weekStart } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
-import { weekText } from '../lib/rota';
+import { orderedDays, weekText } from '../lib/rota';
 import type { PublishedWeek, Settings } from '../lib/types';
 import { personColor } from '../lib/rotaColors';
 import { WeekGrid } from '../components/WeekGrid';
@@ -39,13 +39,13 @@ export default function SchedulePage() {
   const current = published.items.find((w) => w.id === week);
   const nextPublished = published.items.some((w) => w.id === nextWeek);
   const nameOf = (id: string) => employees.find((e) => e.id === id)?.name ?? '?';
-  const days = useMemo(() => current?.days ?? [], [current]);
+  const days = useMemo(() => orderedDays(current?.days ?? []), [current]);
   const next = published.items.find((w) => w.id === nextWeek);
   if (!user) return null;
 
   const gridOf = (w: PublishedWeek) => (
     <WeekGrid
-      days={w.days}
+      days={orderedDays(w.days)}
       people={employees
         .filter((e) => w.days.some((d) => d.shifts.some((s) => s.staff.some((x) => x.employeeId === e.id))))
         .sort((a, b) => Number(b.id === user.id) - Number(a.id === user.id) || a.name.localeCompare(b.name, 'he'))}
@@ -74,6 +74,12 @@ export default function SchedulePage() {
           <Link to="/admin/schedule" className="small-link">{t('✏️ עריכת הסידור')}</Link>
         )}
       </div>
+
+      {isManager && current && (
+        <button type="button" className="primary wide" onClick={() => void renderWeekImage(days, colorOf, nameOf).then((b) => shareOrDownload(b, `rota-${week}.png`)).catch(() => undefined)}>
+          {t('🖼️ ייצוא כתמונה')}
+        </button>
+      )}
 
       <Link to="/schedule/request" className="card summary-line">
         <span>🙋 <strong>{t('בקשת סידור')}</strong>{' '}{t('- לסמן באילו משמרות אפשר לעבוד')}</span>
@@ -145,11 +151,6 @@ export default function SchedulePage() {
           {isManager && (
             <button type="button" className="small" onClick={() => void copy()}>
               {copied ? t('✓ הועתק') : t('העתק לוואטסאפ')}
-            </button>
-          )}
-          {isManager && (
-            <button type="button" className="small" onClick={() => void renderWeekImage(days, colorOf, nameOf).then((b) => shareOrDownload(b, `rota-${week}.png`)).catch(() => undefined)}>
-              {t('🖼️ ייצוא כתמונה')}
             </button>
           )}
         </div>

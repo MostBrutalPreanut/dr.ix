@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeek, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
+import { buildWeek, sortShifts, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
 import type { ShiftAssignment, ShiftDay } from './types';
 
 const WEEK = '2026-10-11'; // a Sunday
@@ -71,5 +71,16 @@ describe('buildWeek', () => {
     const days = buildWeek('2026-09-20', [event], []);
     expect(dayHeading(days[0])).toBe('ראשון 20.9 צביעת מיניאטורות');
     expect(exportDays(days).map((d) => d.date)).toContain('2026-09-20');
+  });
+});
+
+describe('shift order', () => {
+  it('orders by opening time: noon before evening, late event last', () => {
+    const noon = { id: 'noon', from: '11:00', defaultStart: '11:00' };
+    const eve = { id: 'eve', from: '17:00', defaultStart: '17:00' };
+    const late = { id: 'ev-1', from: '19:00', defaultStart: '18:30' };
+    expect(sortShifts([late, eve, noon]).map((s) => s.id)).toEqual(['noon', 'eve', 'ev-1']);
+    const sat: ShiftDay = { id: '2026-10-17', date: '2026-10-17', shifts: [eve, noon].map((s) => ({ ...s, label: s.id, max: 8 })) };
+    expect(buildWeek('2026-10-11', [sat], [])[6].shifts.map((s) => s.id)).toEqual(['noon', 'eve']);
   });
 });

@@ -23,8 +23,17 @@ export function templateShifts(weekday: number): ShiftDef[] {
 /** Start times offered as quick choices. */
 export const START_CHOICES = ['11:00', '16:30', '17:00', '17:30', '19:00', '20:00'];
 
+/** Morning / noon shifts first, then evening, then late events: ordered by when the shift opens. */
+export function sortShifts<T extends Pick<ShiftDef, 'from' | 'defaultStart'>>(shifts: T[]): T[] {
+  const key = (s: T) => s.from ?? s.defaultStart;
+  return [...shifts].sort((a, b) => key(a).localeCompare(key(b)));
+}
+
+/** Published weeks saved before the shifts were ordered still read in the right order. */
+export const orderedDays = (days: PublishedDay[]): PublishedDay[] => days.map((d) => ({ ...d, shifts: sortShifts(d.shifts) }));
+
 export function effectiveShifts(date: string, day?: Pick<ShiftDay, 'shifts'>): ShiftDef[] {
-  return day ? day.shifts : templateShifts(weekdayOf(date));
+  return sortShifts(day ? day.shifts : templateShifts(weekdayOf(date)));
 }
 
 export function weekDates(weekStart: string): string[] {
