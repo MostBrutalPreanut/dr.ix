@@ -75,21 +75,30 @@ export function hoursOf(s: Pick<ShiftDef, 'from' | 'to'>): string {
 
 export const isTime = (v: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
 
-/** Plain text of a published week for WhatsApp. */
-export function weekText(days: PublishedDay[], nameOf: (id: string) => string, dateLabel: (date: string) => string, closedText: string): string {
+/** "20.9" */
+export const shortDate = (date: string) => `${Number(date.slice(8))}.${Number(date.slice(5, 7))}`;
+
+/**
+ * Heading of a day in the export: "שני 20.9 צביעת מיניאטורות" (weekday, date, then the names of the
+ * day's events and its note). Always Hebrew - the export is for the team's WhatsApp, whatever the app language is.
+ */
+export function dayHeading(d: PublishedDay): string {
+  const parts = [...d.shifts.filter((s) => s.event).map((s) => s.label), ...(d.note ? [d.note] : [])];
+  return [WEEKDAY_NAMES[weekdayOf(d.date)], shortDate(d.date), ...new Set(parts)].join(' ');
+}
+
+/** Days that appear in the export: closed days without an event or note are left out. */
+export const exportDays = (days: PublishedDay[]): PublishedDay[] => days.filter((d) => d.shifts.length > 0 || d.note);
+
+/** Plain text of a published week for WhatsApp (Hebrew only, chronological). */
+export function weekText(days: PublishedDay[], nameOf: (id: string) => string): string {
   const lines: string[] = [];
-  for (const d of days) {
-    const staffed = d.shifts.length > 0;
-    const head = `*${WEEKDAY_NAMES[weekdayOf(d.date)]} ${dateLabel(d.date)}*${d.note ? ` - ${d.note}` : ''}`;
-    lines.push(head);
-    if (!staffed) {
-      lines.push(closedText);
-    } else {
-      for (const s of d.shifts) {
-        lines.push(`${s.label}${hoursOf(s) ? ` ${hoursOf(s)}` : ''}`);
-        if (s.staff.length === 0) lines.push('-');
-        for (const w of s.staff) lines.push(`• ${nameOf(w.employeeId)} ${w.start}`);
-      }
+  for (const d of exportDays(days)) {
+    lines.push(`*${dayHeading(d)}*`);
+    for (const s of d.shifts) {
+      lines.push(`${s.label}${hoursOf(s) ? ` ${hoursOf(s)}` : ''}`);
+      if (s.staff.length === 0) lines.push('-');
+      for (const w of s.staff) lines.push(`• ${nameOf(w.employeeId)} ${w.start}`);
     }
     lines.push('');
   }

@@ -1,8 +1,6 @@
 import type { PublishedDay } from './types';
 import type { PersonColor } from './rotaColors';
-import { WEEKDAY_NAMES, weekdayOf } from './dates';
-import { hoursOf } from './rota';
-import { getLang, t, tl } from './i18n';
+import { dayHeading, exportDays, hoursOf } from './rota';
 
 const ROW = 38;
 const HEAD = 34;
@@ -19,8 +17,9 @@ const FONT = 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif';
  * each worker in a cell of their own colour. Closed days are left out.
  */
 export function renderWeekImage(days: PublishedDay[], colorOf: (id: string) => PersonColor, nameOf: (id: string) => string): Promise<Blob> {
-  const open = days.filter((d) => d.shifts.length > 0);
-  const rtl = getLang() !== 'en';
+  // the export is for the team's WhatsApp: always Hebrew and read right to left, whatever the app language is
+  const open = exportDays(days);
+  const rtl = true;
   const rowsOf = (d: PublishedDay) => d.shifts.reduce((n, s) => n + Math.max(1, s.staff.length), 0);
   const bodyRows = Math.max(1, ...open.map(rowsOf));
   const width = Math.max(1, open.length) * DAY_W;
@@ -57,18 +56,16 @@ export function renderWeekImage(days: PublishedDay[], colorOf: (id: string) => P
     const x = rtl ? width - (i + 1) * DAY_W : i * DAY_W;
     const shiftX = rtl ? x + STAFF_W : x;
     const staffX = rtl ? x : x + SHIFT_W;
-    const date = `${Number(d.date.slice(8))}.${Number(d.date.slice(5, 7))}`;
-    const title = `${t(WEEKDAY_NAMES[weekdayOf(d.date)])} ${date}${d.note ? ` ${tl(d.note, d.noteEn)}` : ''}`;
-    cell(x, 0, DAY_W, HEAD, HEAD_BG, [{ text: title, bold: true, size: 16 }]);
-    cell(shiftX, HEAD, SHIFT_W, HEAD, SUB_BG, [{ text: t('משמרת'), bold: true }]);
-    cell(staffX, HEAD, STAFF_W, HEAD, SUB_BG, [{ text: t('עובדים'), bold: true }]);
+    cell(x, 0, DAY_W, HEAD, HEAD_BG, [{ text: dayHeading(d), bold: true, size: 16 }]);
+    cell(shiftX, HEAD, SHIFT_W, HEAD, SUB_BG, [{ text: 'משמרת', bold: true }]);
+    cell(staffX, HEAD, STAFF_W, HEAD, SUB_BG, [{ text: 'עובדים', bold: true }]);
 
     let row = 0;
     for (const s of d.shifts) {
       const n = Math.max(1, s.staff.length);
       const y = HEAD * 2 + row * ROW;
       const hours = hoursOf(s);
-      cell(shiftX, y, SHIFT_W, n * ROW, '#fff', [{ text: tl(s.label, s.labelEn) }, ...(hours ? [{ text: `\u202A${hours}\u202C`, size: 13 }] : [])]);
+      cell(shiftX, y, SHIFT_W, n * ROW, '#fff', [{ text: s.label }, ...(hours ? [{ text: `\u202A${hours}\u202C`, size: 13 }] : [])]);
       if (s.staff.length === 0) cell(staffX, y, STAFF_W, ROW, '#fff');
       s.staff.forEach((w, j) => {
         const c = colorOf(w.employeeId);

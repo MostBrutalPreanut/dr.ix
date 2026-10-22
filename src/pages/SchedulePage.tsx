@@ -56,7 +56,7 @@ export default function SchedulePage() {
   );
 
   async function copy() {
-    const text = weekText(days, nameOf, (d) => `${Number(d.slice(8))}/${Number(d.slice(5, 7))}`, t('סגור'));
+    const text = weekText(days, nameOf);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
