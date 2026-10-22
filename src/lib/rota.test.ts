@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeek, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
+import { buildWeek, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
 import type { ShiftAssignment, ShiftDay } from './types';
 
 const WEEK = '2026-10-11'; // a Sunday
@@ -52,8 +52,17 @@ describe('buildWeek', () => {
     const days = buildWeek(WEEK, [], [a('2026-10-12', 'eve', 'a', '16:30')]);
     expect(myShifts(days, '2026-10-12', 'a')[0].start).toBe('16:30');
     expect(myShifts(days, '2026-10-12', 'b')).toEqual([]);
-    const text = weekText(days, (id) => id.toUpperCase(), (d) => d.slice(8), 'closed');
+    const text = weekText(days, (id) => id.toUpperCase());
     expect(text).toContain('• A 16:30');
-    expect(text).toContain('closed');
+    expect(text).not.toContain('Sunday');
+    expect(text).toContain('שני 12.10');
+    expect(text).not.toContain('ראשון'); // a closed Sunday is left out
+  });
+
+  it('puts the event name in the day heading', () => {
+    const event: ShiftDay = { id: '2026-09-20', date: '2026-09-20', shifts: [{ id: 'ev-1', label: 'צביעת מיניאטורות', defaultStart: '18:00', max: 4, event: true }] };
+    const days = buildWeek('2026-09-20', [event], []);
+    expect(dayHeading(days[0])).toBe('ראשון 20.9 צביעת מיניאטורות');
+    expect(exportDays(days).map((d) => d.date)).toContain('2026-09-20');
   });
 });

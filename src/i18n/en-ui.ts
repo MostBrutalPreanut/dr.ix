@@ -510,4 +510,5 @@ export const UI: Record<string, string> = {
   "🗓️ סידור עבודה": "🗓️ Work schedule",
   "🗓️ עריכת סידור עבודה": "🗓️ Edit the work schedule",
   "🙋 בקשת סידור": "🙋 Shift request",
+  "שמור כתמונה": "Save as image",
 };

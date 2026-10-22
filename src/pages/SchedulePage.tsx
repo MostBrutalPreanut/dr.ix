@@ -5,6 +5,7 @@ import { useCollection } from '../lib/db';
 import { addDays, formatLongDate, weekStart } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { weekText } from '../lib/rota';
+import { renderWeekImage } from '../lib/rotaImage';
 import type { PublishedWeek } from '../lib/types';
 import { Hours, WeekNav, dayTitle, shiftName } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
@@ -30,8 +31,9 @@ export default function SchedulePage() {
   const days = useMemo(() => current?.days ?? [], [current]);
   if (!user) return null;
 
+  // the export is always Hebrew, whatever the language of the app
   async function copy() {
-    const text = weekText(days, nameOf, (d) => `${Number(d.slice(8))}/${Number(d.slice(5, 7))}`, t('סגור'));
+    const text = weekText(days, nameOf);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -39,6 +41,24 @@ export default function SchedulePage() {
     } catch {
       window.prompt(t('העתיקו את הסידור:'), text);
     }
+  }
+
+  async function saveImage() {
+    const blob = await renderWeekImage(days, nameOf);
+    const file = new File([blob], `סידור-${week}.png`, { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        return;
+      } catch {
+        /* cancelled: nothing to do */
+      }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   }
 
   return (
@@ -104,6 +124,11 @@ export default function SchedulePage() {
           {isManager && (
             <button type="button" className="small" onClick={() => void copy()}>
               {copied ? t('✓ הועתק') : t('העתק לוואטסאפ')}
+            </button>
+          )}
+          {isManager && (
+            <button type="button" className="small" onClick={() => void saveImage()}>
+              {t('שמור כתמונה')}
             </button>
           )}
         </div>
