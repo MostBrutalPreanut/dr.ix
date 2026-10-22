@@ -7,7 +7,7 @@ import { useBusinessDate } from '../lib/useBusinessDate';
 import { weekText } from '../lib/rota';
 import { renderWeekImage } from '../lib/rotaImage';
 import type { PublishedWeek } from '../lib/types';
-import { Hours, WeekNav, dayTitle, shiftName } from '../components/ShiftBits';
+import { Hours, WeekNav, dayTitle, shiftName, tagStyle, useStaffColors } from '../components/ShiftBits';
 import { t, tl } from '../lib/i18n';
 
 const BACK_WEEKS = 4;
@@ -24,6 +24,7 @@ export default function SchedulePage() {
   const [week, setWeek] = useState(thisWeek);
   const published = useCollection<PublishedWeek>('schedulePublished', undefined, { from: min, to: max });
   const [copied, setCopied] = useState(false);
+  const colors = useStaffColors();
 
   const current = published.items.find((w) => w.id === week);
   const nextPublished = published.items.some((w) => w.id === nextWeek);
@@ -44,7 +45,7 @@ export default function SchedulePage() {
   }
 
   async function saveImage() {
-    const blob = await renderWeekImage(days, nameOf);
+    const blob = await renderWeekImage(days, nameOf, colors.colorOf);
     const file = new File([blob], `סידור-${week}.png`, { type: 'image/png' });
     if (navigator.canShare?.({ files: [file] })) {
       try {
@@ -107,7 +108,7 @@ export default function SchedulePage() {
                   </div>
                   {s.staff.length === 0 && <p className="muted small-text">{t('עדיין לא שובצו עובדים')}</p>}
                   {s.staff.map((w) => (
-                    <div key={w.employeeId} className={`staff-line${w.employeeId === user.id ? ' me' : ''}`}>
+                    <div key={w.employeeId} className={`staff-line${w.employeeId === user.id ? ' me' : ''}`} style={tagStyle(colors.colorOf(w.employeeId))}>
                       <span>{nameOf(w.employeeId)}</span>
                       <bdi dir="ltr" className="start-time">{w.start}</bdi>
                     </div>

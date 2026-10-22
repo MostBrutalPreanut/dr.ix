@@ -101,3 +101,24 @@ export function weekText(days: PublishedDay[], nameOf: (id: string) => string): 
   }
   return lines.join('\n').trim();
 }
+
+// ---------- worker colors ----------
+
+/** Colors offered as quick choices (the pastel set of the manager's spreadsheet). */
+export const COLOR_PALETTE = ['#6aa84f', '#ea9999', '#b4a7d6', '#ff9900', '#f6b26b', '#a4c2f4', '#ffe599', '#76a5af', '#d5a6bd', '#93c47d'];
+
+export const isHexColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+
+/** A color for somebody who was never given one (stable per person). */
+export function defaultColor(employeeId: string): string {
+  let h = 0;
+  for (const ch of employeeId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return COLOR_PALETTE[h % COLOR_PALETTE.length];
+}
+
+/** Black or white text, whichever reads better on the color. */
+export function textOn(color: string): string {
+  const n = parseInt(color.slice(1), 16);
+  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.6 ? '#111' : '#fff';
+}

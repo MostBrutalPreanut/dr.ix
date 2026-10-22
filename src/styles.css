@@ -1158,8 +1158,7 @@ a.stock-task {
   background: var(--soft);
 }
 .staff-line.me {
-  background: var(--blue);
-  color: var(--on-accent);
+  outline: 3px solid var(--yellow);
   font-weight: 700;
 }
 .start-time {
@@ -1188,4 +1187,44 @@ button.chip.pick.asked {
   .tabbar a {
     font-size: 0.7rem;
   }
+}
+
+.color-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.color-row:last-child {
+  border-bottom: 0;
+}
+.color-name {
+  align-self: flex-start;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+button.swatch {
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+button.swatch.on {
+  border-color: var(--ink);
+}
+input.color-input {
+  width: 40px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: none;
 }

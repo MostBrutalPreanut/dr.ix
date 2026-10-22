@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeek, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
+import { buildWeek, defaultColor, isHexColor, textOn, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
 import type { ShiftAssignment, ShiftDay } from './types';
 
 const WEEK = '2026-10-11'; // a Sunday
@@ -64,5 +64,15 @@ describe('buildWeek', () => {
     const days = buildWeek('2026-09-20', [event], []);
     expect(dayHeading(days[0])).toBe('ראשון 20.9 צביעת מיניאטורות');
     expect(exportDays(days).map((d) => d.date)).toContain('2026-09-20');
+  });
+});
+
+describe('worker colors', () => {
+  it('gives a stable default and picks readable text', () => {
+    expect(defaultColor('ari')).toBe(defaultColor('ari'));
+    expect(isHexColor(defaultColor('x'))).toBe(true);
+    expect(isHexColor('red')).toBe(false);
+    expect(textOn('#ffe599')).toBe('#111');
+    expect(textOn('#1a3a8a')).toBe('#fff');
   });
 });

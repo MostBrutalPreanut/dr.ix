@@ -1,6 +1,7 @@
 import { formatLongDate, weekStart, addDays } from '../lib/dates';
-import { hoursOf } from '../lib/rota';
-import type { ShiftDef } from '../lib/types';
+import { useCollection } from '../lib/db';
+import { defaultColor, hoursOf, isHexColor, textOn } from '../lib/rota';
+import type { ShiftDef, StaffColors } from '../lib/types';
 import { t, tl } from '../lib/i18n';
 
 /** Times and ranges always read left-to-right, also inside Hebrew text. */
@@ -37,3 +38,26 @@ export function WeekNav({ week, min, max, onChange, current }: { week: string; m
 }
 
 export const dayTitle = (date: string) => formatLongDate(date);
+
+const COLORS_ID = 'colors';
+
+/** The color of each worker: the one a manager picked, else a stable default. */
+export function useStaffColors() {
+  const doc = useCollection<StaffColors>('shiftDays', undefined, { from: COLORS_ID, to: COLORS_ID });
+  const map = doc.items[0]?.colors ?? {};
+  const colorOf = (id: string) => (isHexColor(map[id]) ? map[id] : defaultColor(id));
+  const write = (colors: Record<string, string>) => doc.save({ id: COLORS_ID, colors });
+  return {
+    colorOf,
+    picked: (id: string) => isHexColor(map[id]),
+    setColor: (id: string, color: string) => write({ ...map, [id]: color }),
+    resetColor: (id: string) => {
+      const next = { ...map };
+      delete next[id];
+      return write(next);
+    },
+  };
+}
+
+/** Inline style of a worker's tag: their color as background, readable text on top. */
+export const tagStyle = (color: string) => ({ background: color, color: textOn(color) });

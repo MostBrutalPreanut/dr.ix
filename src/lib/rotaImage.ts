@@ -1,5 +1,5 @@
 import type { PublishedDay } from './types';
-import { dayHeading, exportDays, hoursOf } from './rota';
+import { dayHeading, exportDays, hoursOf, textOn } from './rota';
 
 const W = 300; // width of one day
 const HEAD = 44;
@@ -14,7 +14,7 @@ const FONT = "'Heebo', 'Arial Hebrew', Arial, sans-serif";
  * of the week on the right), heading = weekday + date + event name, then "משמרת | עובדים" with the people
  * and their start times. Always Hebrew.
  */
-export function renderWeekImage(days: PublishedDay[], nameOf: (id: string) => string): Promise<Blob> {
+export function renderWeekImage(days: PublishedDay[], nameOf: (id: string) => string, colorOf: (id: string) => string = () => '#fff'): Promise<Blob> {
   const shown = exportDays(days);
   const blockH = (n: number) => Math.max(n * ROW, MIN_BLOCK);
   const bodyH = (d: PublishedDay) => d.shifts.reduce((h, s) => h + blockH(Math.max(1, s.staff.length)), 0) || ROW;
@@ -77,7 +77,8 @@ export function renderWeekImage(days: PublishedDay[], nameOf: (id: string) => st
       }
       for (let k = 0; k < n; k++) {
         const w = s.staff[k];
-        cell(x0, y + k * rowH, W / 2, rowH, '#fff', w ? `${nameOf(w.employeeId)} ${w.start}` : '', { bold: true, size: 17 });
+        const fill = w ? colorOf(w.employeeId) : '#fff';
+        cell(x0, y + k * rowH, W / 2, rowH, fill, w ? `${nameOf(w.employeeId)} ${w.start}` : '', { bold: true, size: 17, color: w ? textOn(fill) : '#000' });
       }
       y += h;
     }

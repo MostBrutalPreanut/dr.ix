@@ -4,9 +4,9 @@ import { useAuth } from '../../lib/auth';
 import { backend, idPrefix, newId, useCollection } from '../../lib/db';
 import { addDays, formatLongDate, weekStart } from '../../lib/dates';
 import { useBusinessDate } from '../../lib/useBusinessDate';
-import { MAX_STAFF, START_CHOICES, assignmentId, buildWeek, effectiveShifts, hasUnpublishedChanges, isTime, requestKey, templateShifts } from '../../lib/rota';
+import { COLOR_PALETTE, MAX_STAFF, START_CHOICES, assignmentId, buildWeek, effectiveShifts, hasUnpublishedChanges, isTime, requestKey, templateShifts } from '../../lib/rota';
 import type { PublishedWeek, ShiftAssignment, ShiftDay, ShiftDef, ShiftRequest } from '../../lib/types';
-import { Hours, WeekNav, dayTitle, shiftName } from '../../components/ShiftBits';
+import { Hours, WeekNav, dayTitle, shiftName, tagStyle, useStaffColors } from '../../components/ShiftBits';
 import { pruneEn, t, tl } from '../../lib/i18n';
 
 const FORWARD_WEEKS = 26; // events can be announced months ahead
@@ -22,6 +22,7 @@ export default function AdminSchedule() {
   const [week, setWeek] = useState(addDays(thisWeek, 7)); // the week that is usually being planned
   const [editDay, setEditDay] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const colors = useStaffColors();
 
   const lastDay = addDays(week, 6);
   const dayDocs = useCollection<ShiftDay>('shiftDays', undefined, { from: week, to: lastDay });
@@ -152,6 +153,7 @@ export default function AdminSchedule() {
                   staff={staffDocs}
                   asked={asked}
                   nameOf={nameOf}
+                  colorOf={colors.colorOf}
                   candidates={employees.map((e) => e.id)}
                   onAdd={(id) => assign(d.date, def, id)}
                   onRemove={unassign}
@@ -162,6 +164,12 @@ export default function AdminSchedule() {
           </article>
         );
       })}
+
+      <ColorsSection
+        people={employees.map((e) => ({ id: e.id, name: e.name }))}
+        colors={colors}
+        onError={() => setError(t('השמירה נכשלה - בדקו חיבור ונסו שוב'))}
+      />
 
       <EventsSection
         today={today}
@@ -183,11 +191,12 @@ export default function AdminSchedule() {
   );
 }
 
-function ShiftEditor({ def, staff, asked, nameOf, candidates, onAdd, onRemove, onStart }: {
+function ShiftEditor({ def, staff, asked, nameOf, colorOf, candidates, onAdd, onRemove, onStart }: {
   def: ShiftDef;
   staff: ShiftAssignment[];
   asked: string[];
   nameOf(id: string): string;
+  colorOf(id: string): string;
   candidates: string[];
   onAdd(id: string): void;
   onRemove(a: ShiftAssignment): void;
@@ -209,7 +218,7 @@ function ShiftEditor({ def, staff, asked, nameOf, candidates, onAdd, onRemove, o
         <p className="small-text">🙋 {t('ביקשו:')} {asked.map((id) => nameOf(id) + (staff.some((a) => a.employeeId === id) ? ' ✓' : '')).join(', ')}</p>
       )}
       {sorted.map((a) => (
-        <div key={a.id} className="staff-line">
+        <div key={a.id} className="staff-line" style={tagStyle(colorOf(a.employeeId))}>
           <span>{nameOf(a.employeeId)}</span>
           <span className="row">
             <input type="time" className="time-in" value={a.start} step={900} aria-label={t('שעת התחלה')} onChange={(e) => onStart(a, e.target.value)} />
@@ -223,7 +232,7 @@ function ShiftEditor({ def, staff, asked, nameOf, candidates, onAdd, onRemove, o
       {adding && !full && (
         <div className="chips" style={{ marginTop: '.4rem' }}>
           {ordered.map((id) => (
-            <button key={id} type="button" className={`chip pick${asked.includes(id) ? ' asked' : ''}`} onClick={() => onAdd(id)}>
+            <button key={id} type="button" className={`chip pick${asked.includes(id) ? ' asked' : ''}`} style={{ borderInlineStart: `10px solid ${colorOf(id)}` }} onClick={() => onAdd(id)}>
               {asked.includes(id) ? '🙋 ' : ''}{nameOf(id)}
             </button>
           ))}
@@ -363,6 +372,46 @@ function EventsSection({ today, events, onAdd, onRemove, onGo }: {
         </div>
         <button type="submit" className="primary" disabled={!ok || busy}>{t('הוסף אירוע')}</button>
       </form>
+    </section>
+  );
+}
+
+/** A color for every worker: quick swatches, or any color from the picker. */
+function ColorsSection({ people, colors, onError }: { people: { id: string; name: string }[]; colors: ReturnType<typeof useStaffColors>; onError(): void }) {
+  const [open, setOpen] = useState(false);
+  const run = (action: Promise<void>) => action.catch(onError);
+  return (
+    <section>
+      <div className="section-head">
+        <h2>{t('🎨 צבעי עובדים')}</h2>
+        <button type="button" className="small" onClick={() => setOpen(!open)}>{open ? t('סגור') : t('שינוי צבעים')}</button>
+      </div>
+      {!open && (
+        <div className="chips">
+          {people.map((p) => <span key={p.id} className="chip" style={tagStyle(colors.colorOf(p.id))}>{p.name}</span>)}
+        </div>
+      )}
+      {open && (
+        <div className="card">
+          {people.map((p) => {
+            const color = colors.colorOf(p.id);
+            return (
+              <div key={p.id} className="color-row">
+                <span className="chip color-name" style={tagStyle(color)}>{p.name}</span>
+                <span className="swatches">
+                  {COLOR_PALETTE.map((c) => (
+                    <button key={c} type="button" className={`swatch${c.toLowerCase() === color.toLowerCase() ? ' on' : ''}`} style={{ background: c }} aria-label={c} onClick={() => void run(colors.setColor(p.id, c))} />
+                  ))}
+                  <input type="color" className="color-input" value={color} aria-label={t('בחירת צבע')} onChange={(e) => void run(colors.setColor(p.id, e.target.value))} />
+                  {colors.picked(p.id) && (
+                    <button type="button" className="small" onClick={() => void run(colors.resetColor(p.id))}>{t('איפוס')}</button>
+                  )}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

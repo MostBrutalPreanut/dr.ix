@@ -315,3 +315,12 @@ export interface ShiftRequest extends Doc {
   note?: string;
   at: string;
 }
+
+/**
+ * The color of every worker in the schedule (chosen by a manager). One document, id = 'colors'.
+ * It lives in the shiftDays collection (readable by all, writable by managers) under an id that
+ * is not a date, so it never shows up in a date range.
+ */
+export interface StaffColors extends Doc {
+  colors: Record<string, string>;
+}
