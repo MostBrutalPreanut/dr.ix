@@ -17,6 +17,7 @@ import AdminTasks from './pages/admin/AdminTasks';
 import AdminWix from './pages/admin/AdminWix';
 import AdminInventory from './pages/admin/AdminInventory';
 import InventoryPage from './pages/InventoryPage';
+import InventoryReportsPage from './pages/InventoryReportsPage';
 import SchedulePage from './pages/SchedulePage';
 import ScheduleRequestPage from './pages/ScheduleRequestPage';
 import AdminSchedule from './pages/admin/AdminSchedule';
@@ -46,6 +47,7 @@ function Gate() {
           <>
             <Route path="admin" element={<AdminHome />} />
             <Route path="admin/inventory" element={<AdminInventory />} />
+            <Route path="inventory/reports" element={<InventoryReportsPage />} />
           </>
         )}
         {isManager && (

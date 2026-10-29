@@ -163,7 +163,7 @@ describe('recommend', () => {
   });
 });
 
-import { categoriesOf, formatRestockList, isDueOn, latestReports, levelOf, moveItem, parseBulk, restockList } from './inventory';
+import { answersOn, categoriesOf, formatRestockList, isDueOn, latestReports, levelOf, moveItem, parseBulk, restockList, unansweredOn } from './inventory';
 import type { InventoryItem, InventoryReport } from './types';
 
 const item = (over: Partial<InventoryItem>): InventoryItem => ({
@@ -242,6 +242,23 @@ describe('inventory', () => {
     const out = parseBulk('חלב\n\n - גבינה \n• קפה\nחלב', { category: 'מקרר', mode: 'status', days: [] }, [item({ name: 'קפה', order: 90 })], () => `n${++n}`);
     expect(out.map((i) => i.name)).toEqual(['חלב', 'גבינה']);
     expect(out.map((i) => i.order)).toEqual([91, 92]);
+  });
+
+  it("lists one day's answers in list order and the due items nobody answered", () => {
+    const items = [
+      item({ id: 'a', category: 'ב', order: 20 }),
+      item({ id: 'b', category: 'א', order: 10 }),
+      item({ id: 'c', category: 'ב', order: 15, days: [4] }),
+      item({ id: 'd', category: 'ב', order: 30, days: [5] }),
+    ];
+    const reports = [
+      rep({ id: '1', itemId: 'a', date: '2026-10-01' }),
+      rep({ id: '2', itemId: 'b', date: '2026-10-01' }),
+      rep({ id: '3', itemId: 'c', date: '2026-09-30' }),
+      rep({ id: '4', itemId: 'gone', date: '2026-10-01' }),
+    ];
+    expect(answersOn(items, reports, '2026-10-01').map((r) => r.item.id)).toEqual(['b', 'a']);
+    expect(unansweredOn(items, reports, '2026-10-01', 4).map((i) => i.id)).toEqual(['c']);
   });
 });
 

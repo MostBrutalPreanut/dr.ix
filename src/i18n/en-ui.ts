@@ -226,6 +226,14 @@ export const UI: Record<string, string> = {
   'טוען תמונה…': 'Loading photo…',
   'אין חוסרים ({date})': 'Nothing missing ({date})',
   '🛒 רשימת קניות - {date}': '🛒 Shopping list - {date}',
+  '📋 דוחות מלאי': '📋 Stock reports',
+  '→ חזרה למלאי': '← Back to stock',
+  'כל מה שמולא בכל יום. הנתונים נשמרים שבוע ואז נמחקים.': 'Everything that was filled in, day by day. The data is kept for a week and then deleted.',
+  'מולאו {n} פריטים': '{n} items filled in',
+  '{n} לא מולאו': '{n} not filled in',
+  'לא מולא כלום ביום הזה.': 'Nothing was filled in on this day.',
+  '📷 הצג תמונה': '📷 Show photo',
+  'התמונה לא נמצאה.': 'The photo was not found.',
 
   // tips
   'היום הקודם': 'Previous day',
