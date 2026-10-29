@@ -123,3 +123,29 @@ export function parseBulk(
   }
   return out;
 }
+
+/** Answers are kept this many days back (older ones are deleted; the reports screen goes back this far). */
+export const KEEP_DAYS = 7;
+
+export interface DayAnswer {
+  item: InventoryItem;
+  report: InventoryReport;
+}
+
+/** The answers given on one day, in list order (category, then item). Answers of deleted items are left out. */
+export function answersOn(items: InventoryItem[], reports: InventoryReport[], date: string): DayAnswer[] {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const rows: DayAnswer[] = [];
+  for (const report of reports) {
+    const item = byId.get(report.itemId);
+    if (report.date === date && item) rows.push({ item, report });
+  }
+  const cats = categoriesOf(rows.map((r) => r.item));
+  return rows.sort((a, b) => cats.indexOf(a.item.category) - cats.indexOf(b.item.category) || a.item.order - b.item.order);
+}
+
+/** Items that were to be checked that day (by today's settings) and got no answer. */
+export function unansweredOn(items: InventoryItem[], reports: InventoryReport[], date: string, weekday: number): InventoryItem[] {
+  const answered = new Set(reports.filter((r) => r.date === date).map((r) => r.itemId));
+  return items.filter((i) => isDueOn(i, weekday) && !answered.has(i.id)).sort((a, b) => a.order - b.order);
+}

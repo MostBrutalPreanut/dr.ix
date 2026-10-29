@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { backend, useCollection } from '../lib/db';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { addDays, formatLongDate, weekdayOf } from '../lib/dates';
-import { catLabel, categoriesOf, formatRestockList, isDueOn, itemsOfCategory, latestReports, levelOf, restockList } from '../lib/inventory';
+import { KEEP_DAYS, catLabel, categoriesOf, formatRestockList, isDueOn, itemsOfCategory, latestReports, levelOf, restockList } from '../lib/inventory';
 import { shrinkImage } from '../lib/image';
+import { purgeOldInventory } from '../lib/inventoryPurge';
 import { LEVEL_LABEL } from '../lib/types';
 import type { InventoryItem, InventoryPhoto, InventoryReport, StockLevel } from '../lib/types';
 import { seedInventory } from '../seed/inventory';
@@ -16,8 +17,9 @@ const LEVELS: StockLevel[] = ['ok', 'low', 'out'];
 export default function InventoryPage() {
   const { user, canEditInventory } = useAuth();
   const today = useBusinessDate();
+  const navigate = useNavigate();
   const items = useCollection<InventoryItem>('inventoryItems', seedInventory);
-  const reports = useCollection<InventoryReport>('inventoryReports', undefined, { from: addDays(today, -7), to: `${today}~` });
+  const reports = useCollection<InventoryReport>('inventoryReports', undefined, { from: addDays(today, -KEEP_DAYS), to: `${today}~` });
   const [showAll, setShowAll] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
@@ -30,6 +32,11 @@ export default function InventoryPage() {
   const due = useMemo(() => active.filter((i) => isDueOn(i, weekday)), [active, weekday]);
   const shown = showAll ? active : due;
   const doneCount = due.filter((i) => todays.has(i.id)).length;
+
+  // answers older than a week are deleted by the people who manage the stock
+  useEffect(() => {
+    if (canEditInventory) purgeOldInventory(today).catch(() => undefined);
+  }, [canEditInventory, today]);
 
   async function write(item: InventoryItem, patch: Partial<InventoryReport>) {
     if (!user) return;
@@ -59,7 +66,14 @@ export default function InventoryPage() {
 
   return (
     <>
-      <h1>{t('📦 מלאי')}</h1>
+      <div className="section-head">
+        <h1>{t('📦 מלאי')}</h1>
+        {canEditInventory && (
+          <button type="button" className="small" onClick={() => navigate('/inventory/reports')}>
+            {t('📋 דוחות מלאי')}
+          </button>
+        )}
+      </div>
       {error && <p className="banner-warn" role="alert">{error}</p>}
 
       {items.loading ? (
