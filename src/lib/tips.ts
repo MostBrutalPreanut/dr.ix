@@ -56,32 +56,74 @@ export function splitTips(
   return Object.fromEntries(workers.map((w, i) => [w.id, floors[i] / 100]));
 }
 
-export interface DayTips {
-  date: string;
+type EntryIn = { date: string; amount: number; shift?: string; at?: string };
+type WorkerIn = { date: string; employeeId: string; shift?: string; reinforcement?: boolean; hours?: number; at?: string };
+
+/**
+ * A day is one tips shift (the main one, key ''), unless more shifts were added (not on Saturday,
+ * where noon and evening share together). Every extra shift has a name, which is also its key.
+ * Returns the main shift first, then the others in the order they were started.
+ */
+export function shiftsOf(docs: { shift?: string; at?: string }[]): string[] {
+  const first = new Map<string, string>();
+  for (const d of docs) {
+    const key = d.shift ?? '';
+    const at = d.at ?? '';
+    if (key && (!first.has(key) || at < first.get(key)!)) first.set(key, at);
+  }
+  return ['', ...[...first.entries()].sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0], 'he')).map(([k]) => k)];
+}
+
+/** id of a "worked" mark: the main shift keeps the original `${date}|${employeeId}`. */
+export function tipWorkerId(date: string, shift: string, employeeId: string): string {
+  return shift ? `${date}|${shift}|${employeeId}` : `${date}|${employeeId}`;
+}
+
+/** A shift name that is safe inside an id. */
+export const cleanShiftName = (name: string) => name.replace(/[|~]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 30);
+
+export interface ShiftTips {
+  /** '' = the day's main shift */
+  shift: string;
   total: number;
   workers: TipWorker[];
-  /** split of the day's total (empty when nobody is marked as working) */
+  /** split of the shift's total (empty when nobody is marked as working) */
   shares: Record<string, number>;
 }
 
-/** Tips of one business day: sum of the entries, split between the people who worked. */
-export function dayTips(
-  date: string,
-  entries: { date: string; amount: number }[],
-  workers: { date: string; employeeId: string; reinforcement?: boolean; hours?: number }[],
-  weekday: number,
-): DayTips {
-  const total = Math.round(entries.filter((e) => e.date === date).reduce((n, e) => n + e.amount * 100, 0)) / 100;
-  const list: TipWorker[] = workers
-    .filter((w) => w.date === date)
-    .map((w) => ({ id: w.employeeId, reinforcement: w.reinforcement, hours: w.hours }));
-  return { date, total, workers: list, shares: splitTips(total, list, fullShiftHours(weekday)) };
+export interface DayTips {
+  date: string;
+  total: number;
+  /** every shift splits its own amount between its own workers */
+  shifts: ShiftTips[];
+  /** what every person got that day, all shifts together */
+  shares: Record<string, number>;
+}
+
+/** Tips of one business day: per shift, the sum of its entries split between the people who worked it. */
+export function dayTips(date: string, entries: EntryIn[], workers: WorkerIn[], weekday: number): DayTips {
+  const es = entries.filter((e) => e.date === date);
+  const ws = workers.filter((w) => w.date === date);
+  const shifts = shiftsOf([...es, ...ws])
+    .map((shift): ShiftTips => {
+      const total = Math.round(es.filter((e) => (e.shift ?? '') === shift).reduce((n, e) => n + e.amount * 100, 0)) / 100;
+      const list: TipWorker[] = ws
+        .filter((w) => (w.shift ?? '') === shift)
+        .map((w) => ({ id: w.employeeId, reinforcement: w.reinforcement, hours: w.hours }));
+      return { shift, total, workers: list, shares: splitTips(total, list, fullShiftHours(weekday)) };
+    })
+    // an unused main shift is left out when the day has other shifts
+    .filter((s, _, all) => s.shift !== '' || all.length === 1 || s.total > 0 || s.workers.length > 0);
+  const agorot: Record<string, number> = {};
+  for (const s of shifts) for (const [id, v] of Object.entries(s.shares)) agorot[id] = (agorot[id] ?? 0) + Math.round(v * 100);
+  const total = shifts.reduce((n, s) => n + Math.round(s.total * 100), 0) / 100;
+  return { date, total, shifts, shares: Object.fromEntries(Object.entries(agorot).map(([id, a]) => [id, a / 100])) };
 }
 
 /** Every day of the given entries/workers, newest first. */
 export function monthDays(
-  entries: { date: string; amount: number }[],
-  workers: { date: string; employeeId: string; reinforcement?: boolean; hours?: number }[],
+  entries: EntryIn[],
+  workers: WorkerIn[],
   weekdayOf: (date: string) => number,
 ): DayTips[] {
   const dates = [...new Set([...entries.map((e) => e.date), ...workers.map((w) => w.date)])].sort().reverse();

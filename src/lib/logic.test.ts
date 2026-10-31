@@ -262,7 +262,7 @@ describe('inventory', () => {
   });
 });
 
-import { dayTips, monthDays, totalsByPerson } from './tips';
+import { cleanShiftName, dayTips, monthDays, shiftsOf, tipWorkerId, totalsByPerson } from './tips';
 
 describe('tips by day and month', () => {
   const entries = [
@@ -290,5 +290,30 @@ describe('tips by day and month', () => {
   });
   it('a day with tips but nobody marked has no shares', () => {
     expect(dayTips('2026-10-02', entries, [], 4).shares).toEqual({});
+  });
+  it('splits every shift of the day on its own', () => {
+    const es = [
+      { date: '2026-10-05', amount: 100, at: '2026-10-05T10:00:00Z' },
+      { date: '2026-10-05', amount: 300, shift: 'ערב', at: '2026-10-05T20:00:00Z' },
+    ];
+    const ws = [
+      { date: '2026-10-05', employeeId: 'a' },
+      { date: '2026-10-05', employeeId: 'b' },
+      { date: '2026-10-05', employeeId: 'b', shift: 'ערב' },
+      { date: '2026-10-05', employeeId: 'c', shift: 'ערב' },
+      { date: '2026-10-05', employeeId: 'd', shift: 'ערב' },
+    ];
+    const d = dayTips('2026-10-05', es, ws, 1);
+    expect(d.total).toBe(400);
+    expect(d.shifts.map((s) => `${s.shift}:${s.total}`)).toEqual([':100', 'ערב:300']);
+    expect(d.shares).toEqual({ a: 50, b: 150, c: 100, d: 100 }); // b worked both shifts
+  });
+  it('leaves out an unused main shift and orders shifts by when they started', () => {
+    expect(shiftsOf([{ shift: 'ערב', at: '2' }, { shift: 'צהריים', at: '1' }, {}])).toEqual(['', 'צהריים', 'ערב']);
+    const d = dayTips('2026-10-05', [{ date: '2026-10-05', amount: 50, shift: 'אירוע' }], [], 1);
+    expect(d.shifts.map((s) => s.shift)).toEqual(['אירוע']);
+    expect(tipWorkerId('2026-10-05', '', 'a')).toBe('2026-10-05|a');
+    expect(tipWorkerId('2026-10-05', 'ערב', 'a')).toBe('2026-10-05|ערב|a');
+    expect(cleanShiftName(' ערב | ~ שני ')).toBe('ערב שני');
   });
 });

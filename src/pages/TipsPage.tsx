@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { backend, idPrefix, newId, useCollection } from '../lib/db';
 import { WEEKDAY_NAMES, addDays, formatLongDate, formatTime, weekdayOf } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
-import { dayTips, fullShiftHours, monthDays, totalsByPerson } from '../lib/tips';
+import { cleanShiftName, dayTips, fullShiftHours, monthDays, shiftsOf, tipWorkerId, totalsByPerson } from '../lib/tips';
 import type { DayTips } from '../lib/tips';
 import type { TipEntry, TipWorkerDoc } from '../lib/types';
-import { getLang, t } from '../lib/i18n';
+import { getLang, t, tn } from '../lib/i18n';
 
 const money = (n: number) => `₪${n.toLocaleString(getLang() === 'en' ? 'en-GB' : 'he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
@@ -40,6 +40,95 @@ function DayNav({ date, today, back, onChange }: { date: string; today: string; 
       <strong>{formatLongDate(date)}</strong>
       <button type="button" className="small" disabled={date >= today} onClick={() => onChange(addDays(date, 1))} aria-label={t('היום הבא')}>{t('←')}</button>
     </div>
+  );
+}
+
+const PRESET_SHIFTS = [tn('צהריים'), tn('ערב'), tn('אירוע')];
+
+/** '' is the day's main shift; extra shifts are shown by their name. */
+const shiftLabel = (shift: string) => (shift ? t(shift) : t('משמרת ראשונה'));
+
+/** The day's shifts from its documents, plus shifts just added on this screen (they exist once something is saved in them). */
+function useShifts(date: string, docs: { shift?: string; at?: string }[]) {
+  const [shift, setShift] = useState('');
+  const [extra, setExtra] = useState<string[]>([]);
+  useEffect(() => {
+    setShift('');
+    setExtra([]);
+  }, [date]);
+  const known = shiftsOf(docs);
+  const shifts = [...known, ...extra.filter((x) => !known.includes(x))];
+  const add = (name: string) => {
+    setExtra((list) => (list.includes(name) ? list : [...list, name]));
+    setShift(name);
+  };
+  return { shifts, shift: shifts.includes(shift) ? shift : '', setShift, add };
+}
+
+/**
+ * Picks the tips shift everything below belongs to, and adds one. On Saturday noon and evening share
+ * all the tips together, so no shift can be added there.
+ */
+function ShiftTabs({ date, shifts, value, onChange, onAdd }: { date: string; shifts: string[]; value: string; onChange(s: string): void; onAdd(name: string): void }) {
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const saturday = weekdayOf(date) === 6;
+  useEffect(() => {
+    setAdding(false);
+    setName('');
+  }, [date]);
+  if (saturday && shifts.length === 1) return null;
+
+  function add(raw: string) {
+    const clean = cleanShiftName(raw);
+    if (!clean) return;
+    onAdd(clean);
+    setAdding(false);
+    setName('');
+  }
+
+  return (
+    <section className="card form">
+      {shifts.length > 1 && (
+        <>
+          <h2>{t('משמרת')}</h2>
+          <div className="chips" role="group" aria-label={t('משמרת')}>
+            {shifts.map((s) => (
+              <button key={s} type="button" className={`chip pick${s === value ? ' on' : ''}`} aria-pressed={s === value} onClick={() => onChange(s)}>
+                {shiftLabel(s)}
+              </button>
+            ))}
+          </div>
+          <p className="muted small-text">{t('כל משמרת מתחלקת בנפרד: הסכום שלה רק בין מי שסומן בה.')}</p>
+        </>
+      )}
+      {!saturday &&
+        (adding ? (
+          <>
+            <p className="small-text">{t('שם המשמרת הנוספת:')}</p>
+            <div className="chips">
+              {PRESET_SHIFTS.filter((p) => !shifts.includes(p)).map((p) => (
+                <button key={p} type="button" className="chip pick" onClick={() => add(p)}>
+                  {t(p)}
+                </button>
+              ))}
+            </div>
+            <div className="row">
+              <input style={{ flex: 1 }} value={name} maxLength={30} placeholder={t('או שם אחר')} aria-label={t('שם המשמרת')} onChange={(e) => setName(e.target.value)} />
+              <button type="button" className="primary" disabled={!cleanShiftName(name)} onClick={() => add(name)}>
+                {t('הוסף')}
+              </button>
+              <button type="button" onClick={() => setAdding(false)}>
+                {t('ביטול')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <button type="button" className="small" onClick={() => setAdding(true)}>
+            {t('+ משמרת טיפים נוספת')}
+          </button>
+        ))}
+    </section>
   );
 }
 
@@ -82,12 +171,13 @@ function AmountForm({ onAdd }: { onAdd(amount: number, note: string): Promise<vo
 }
 
 /** Who worked that day (names and hours only - no money here). */
-function WorkersPicker({ date, hint }: { date: string; hint: string }) {
+function WorkersPicker({ date, shift, hint }: { date: string; shift: string; hint: string }) {
   const { user, employees } = useAuth();
   const workers = useCollection<TipWorkerDoc>('tipWorkers', undefined, idPrefix(date));
   const [error, setError] = useState('');
   const fullShift = fullShiftHours(weekdayOf(date));
-  const doc = (id: string) => workers.items.find((w) => w.employeeId === id);
+  const mine = workers.items.filter((w) => (w.shift ?? '') === shift);
+  const doc = (id: string) => mine.find((w) => w.employeeId === id);
   const nameOf = (id: string) => employees.find((e) => e.id === id)?.name ?? '?';
 
   async function guard(action: () => Promise<void>) {
@@ -102,7 +192,7 @@ function WorkersPicker({ date, hint }: { date: string; hint: string }) {
     guard(async () => {
       const cur = doc(id);
       if (cur) await workers.remove(cur.id);
-      else await workers.save({ id: `${date}|${id}`, date, employeeId: id, by: user!.id, at: new Date().toISOString() });
+      else await workers.save({ id: tipWorkerId(date, shift, id), date, employeeId: id, ...(shift ? { shift } : {}), by: user!.id, at: new Date().toISOString() });
     });
   const patch = (w: TipWorkerDoc, p: Partial<TipWorkerDoc>) => {
     const next: TipWorkerDoc = { ...w, ...p, by: user!.id, at: new Date().toISOString() };
@@ -115,7 +205,10 @@ function WorkersPicker({ date, hint }: { date: string; hint: string }) {
 
   return (
     <section className="card form">
-      <h2>{t('מי עבד (')}{workers.items.length})</h2>
+      <h2>
+        {t('מי עבד (')}{mine.length})
+        {shift && <span className="muted small-text"> · {shiftLabel(shift)}</span>}
+      </h2>
       <p className="muted small-text">{hint}{' '}{t('מתגבר/ת: מסמנים ורושמים כמה שעות עבד/ה (משמרת מלאה היא')}{' '}{fullShift}{' '}{t('שעות).')}</p>
       {error && <p className="banner-warn" role="alert">{error}</p>}
       <div className="chips">
@@ -130,7 +223,7 @@ function WorkersPicker({ date, hint }: { date: string; hint: string }) {
             );
           })}
       </div>
-      {workers.items.map((w) => (
+      {mine.map((w) => (
         <div key={w.id} className="li emp">
           <span className="li-body">
             <strong>{nameOf(w.employeeId)}</strong>
@@ -167,15 +260,18 @@ function StaffTips() {
   const today = useBusinessDate();
   const [date, setDate] = useState(today);
   // what this person added in this visit, so a typing mistake can be undone (they never see the day's total)
-  const [added, setAdded] = useState<{ id: string; amount: number; date: string; at: string }[]>([]);
+  const [added, setAdded] = useState<{ id: string; amount: number; date: string; at: string; shift?: string }[]>([]);
   const [error, setError] = useState('');
+  // staff cannot read the amounts, so the day's shifts come from the "worked" marks and from what they added here
+  const workers = useCollection<TipWorkerDoc>('tipWorkers', undefined, idPrefix(date));
+  const { shifts, shift, setShift, add: addShift } = useShifts(date, [...workers.items, ...added.filter((a) => a.date === date)]);
 
   async function add(amount: number, note: string) {
     const id = `${date}|${newId()}`;
     const at = new Date().toISOString();
     try {
-      await backend.upsert('tipEntries', { id, date, amount, ...(note ? { note } : {}), by: user!.id, at } as TipEntry);
-      setAdded((a) => [...a, { id, amount, date, at }]);
+      await backend.upsert('tipEntries', { id, date, amount, ...(note ? { note } : {}), ...(shift ? { shift } : {}), by: user!.id, at } as TipEntry);
+      setAdded((a) => [...a, { id, amount, date, at, ...(shift ? { shift } : {}) }]);
       setError('');
     } catch {
       setError(t('השמירה נכשלה - בדקו חיבור ונסו שוב'));
@@ -196,16 +292,20 @@ function StaffTips() {
       <p className="muted">{t('בסוף המשמרת מזינים את סכום הטיפים ומסמנים מי עבד. החישוב וההפרשה אצל ההנהלה.')}</p>
       {error && <p className="banner-warn" role="alert">{error}</p>}
       <DayNav date={date} today={today} back={1} onChange={setDate} />
+      <ShiftTabs date={date} shifts={shifts} value={shift} onChange={setShift} onAdd={addShift} />
 
       <section className="card form">
-        <h2>{t('הוספת סכום')}</h2>
+        <h2>
+          {t('הוספת סכום')}
+          {shifts.length > 1 && <span className="muted small-text"> · {shiftLabel(shift)}</span>}
+        </h2>
         <AmountForm onAdd={add} />
         {added.map((a) => (
           <div key={a.id} className="li emp">
             <span className="li-body">
               <strong>{t('✓ נוסף')}{' '}{money(a.amount)}</strong>
               <span className="muted small-text">
-                {shortDate(a.date)} · {formatTime(a.at)}
+                {shortDate(a.date)}{a.shift ? ` · ${shiftLabel(a.shift)}` : ''} · {formatTime(a.at)}
               </span>
             </span>
             <button type="button" className="small danger" onClick={() => void undo(a.id)}>
@@ -215,7 +315,7 @@ function StaffTips() {
         ))}
       </section>
 
-      <WorkersPicker date={date} hint={t('מסמנים את כל מי שעבד באותו יום.')} />
+      <WorkersPicker date={date} shift={shift} hint={shifts.length > 1 ? t('מסמנים את כל מי שעבד במשמרת הזו.') : t('מסמנים את כל מי שעבד באותו יום.')} />
     </>
   );
 }
@@ -224,11 +324,15 @@ function StaffTips() {
 
 function csvOf(days: DayTips[], nameOf: (id: string) => string): string {
   const q = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-  const rows = [[t('תאריך'), t('יום'), t('סה"כ טיפים ליום'), t('עובד/ת'), t('מתגבר/ת'), t('שעות'), t('חלק')].map(q).join(',')];
+  const rows = [[t('תאריך'), t('יום'), t('משמרת'), t('סה"כ טיפים למשמרת'), t('עובד/ת'), t('מתגבר/ת'), t('שעות'), t('חלק')].map(q).join(',')];
   for (const d of [...days].reverse()) {
-    if (d.workers.length === 0) rows.push([d.date, t(WEEKDAY_NAMES[weekdayOf(d.date)]), d.total, t('(אין עובדים מסומנים)'), '', '', ''].map(q).join(','));
-    for (const w of d.workers)
-      rows.push([d.date, t(WEEKDAY_NAMES[weekdayOf(d.date)]), d.total, nameOf(w.id), w.reinforcement ? t('כן') : '', w.reinforcement ? (w.hours ?? '') : '', d.shares[w.id] ?? 0].map(q).join(','));
+    const day = t(WEEKDAY_NAMES[weekdayOf(d.date)]);
+    for (const s of d.shifts) {
+      const label = d.shifts.length > 1 ? shiftLabel(s.shift) : '';
+      if (s.workers.length === 0) rows.push([d.date, day, label, s.total, t('(אין עובדים מסומנים)'), '', '', ''].map(q).join(','));
+      for (const w of s.workers)
+        rows.push([d.date, day, label, s.total, nameOf(w.id), w.reinforcement ? t('כן') : '', w.reinforcement ? (w.hours ?? '') : '', s.shares[w.id] ?? 0].map(q).join(','));
+    }
   }
   return rows.join('\r\n');
 }
@@ -247,10 +351,14 @@ function ManagerTips() {
   const monthWorkers = useCollection<TipWorkerDoc>('tipWorkers', undefined, idPrefix(month));
 
   const day = useMemo(() => dayTips(date, dayEntries.items, dayWorkers.items, weekdayOf(date)), [date, dayEntries.items, dayWorkers.items]);
+  const { shifts, shift, setShift, add: addShift } = useShifts(date, [...dayEntries.items, ...dayWorkers.items]);
+  const cur = day.shifts.find((s) => s.shift === shift);
   const days = useMemo(() => monthDays(monthEntries.items, monthWorkers.items, weekdayOf), [monthEntries.items, monthWorkers.items]);
   const totals = useMemo(() => totalsByPerson(days), [days]);
   const monthTotal = days.reduce((n, d) => n + d.total, 0);
-  const undivided = days.filter((d) => d.total > 0 && d.workers.length === 0);
+  const undivided = days.flatMap((d) =>
+    d.shifts.filter((s) => s.total > 0 && s.workers.length === 0).map((s) => `${shortDate(d.date)}${d.shifts.length > 1 ? ` (${shiftLabel(s.shift)})` : ''}`),
+  );
 
   async function guard(action: () => Promise<void>) {
     try {
@@ -280,15 +388,24 @@ function ManagerTips() {
       <h1>{t('💰 טיפים')}</h1>
       {error && <p className="banner-warn" role="alert">{error}</p>}
       <DayNav date={date} today={today} back={400} onChange={setDate} />
+      <ShiftTabs date={date} shifts={shifts} value={shift} onChange={setShift} onAdd={addShift} />
 
       <section className="card form">
         <h2>
           {t('היום שנבחר:')}{' '}{money(day.total)}
         </h2>
+        {shifts.length > 1 && (
+          <p>
+            <strong>{shiftLabel(shift)}: {money(cur?.total ?? 0)}</strong>
+          </p>
+        )}
         <AmountForm
-          onAdd={(amount, note) => guard(() => dayEntries.save({ id: `${date}|${newId()}`, date, amount, ...(note ? { note } : {}), by: user!.id, at: new Date().toISOString() }))}
+          onAdd={(amount, note) =>
+            guard(() => dayEntries.save({ id: `${date}|${newId()}`, date, amount, ...(note ? { note } : {}), ...(shift ? { shift } : {}), by: user!.id, at: new Date().toISOString() }))
+          }
         />
         {dayEntries.items
+          .filter((e) => (e.shift ?? '') === shift)
           .slice()
           .sort((a, b) => a.at.localeCompare(b.at))
           .map((e) => (
@@ -311,14 +428,14 @@ function ManagerTips() {
               </button>
             </div>
           ))}
-        {day.workers.length > 0 && day.total > 0 && (
+        {cur && cur.workers.length > 0 && cur.total > 0 && (
           <p className="muted small-text">
-            {t('חלוקה:')}{' '}{day.workers.map((w) => `${nameOf(w.id)} ${money(day.shares[w.id])}`).join(' · ')}
+            {t('חלוקה:')}{' '}{cur.workers.map((w) => `${nameOf(w.id)} ${money(cur.shares[w.id])}`).join(' · ')}
           </p>
         )}
       </section>
 
-      <WorkersPicker date={date} hint={t('כל מי שמסומן מקבל חלק שווה.')} />
+      <WorkersPicker date={date} shift={shift} hint={shifts.length > 1 ? t('כל מי שמסומן במשמרת הזו מקבל חלק שווה מהסכום שלה.') : t('כל מי שמסומן מקבל חלק שווה.')} />
 
       <section>
         <div className="row between">
@@ -347,7 +464,7 @@ function ManagerTips() {
         </p>
         {undivided.length > 0 && (
           <p className="banner-warn">
-            {t('ימים עם טיפים אבל בלי עובדים מסומנים (לא חולקו):')}{' '}{undivided.map((d) => shortDate(d.date)).join(', ')}
+            {t('ימים עם טיפים אבל בלי עובדים מסומנים (לא חולקו):')}{' '}{undivided.join(', ')}
           </p>
         )}
         <div className="row">
@@ -368,15 +485,14 @@ function ManagerTips() {
               </strong>
               <strong>{money(d.total)}</strong>
             </div>
-            {d.workers.length === 0 ? (
-              <span className="muted small-text">{t('אין עובדים מסומנים')}</span>
-            ) : (
-              <span className="muted small-text block">
-                {d.workers
-                  .map((w) => `${nameOf(w.id)}${w.reinforcement ? t(' (מתגבר {p1} ש׳)', { p1: w.hours ?? '?' }) : ''} ${money(d.shares[w.id] ?? 0)}`)
-                  .join(' · ')}
+            {d.shifts.map((s) => (
+              <span key={s.shift} className="muted small-text block">
+                {d.shifts.length > 1 && <strong>{shiftLabel(s.shift)} {money(s.total)}: </strong>}
+                {s.workers.length === 0
+                  ? t('אין עובדים מסומנים')
+                  : s.workers.map((w) => `${nameOf(w.id)}${w.reinforcement ? t(' (מתגבר {p1} ש׳)', { p1: w.hours ?? '?' }) : ''} ${money(s.shares[w.id] ?? 0)}`).join(' · ')}
               </span>
-            )}
+            ))}
             {monthEntries.items.filter((e) => e.date === d.date && e.note).map((e) => (
               <span key={e.id} className="small-text block">📝 {e.note} <span className="muted">({nameOf(e.by)})</span></span>
             ))}
