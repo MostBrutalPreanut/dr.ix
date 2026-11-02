@@ -241,14 +241,21 @@ export interface TipEntry extends Doc {
   amount: number;
   /** free note from whoever entered it (managers read it) */
   note?: string;
+  /** name of an extra tips shift of that day (none = the day's main shift) */
+  shift?: string;
   by: string;
   at: string;
 }
 
-/** Somebody who worked on that business day (and shares the day's tips). id = `${date}|${employeeId}` */
+/**
+ * Somebody who worked on that business day (and shares the shift's tips).
+ * id = `${date}|${employeeId}`, or `${date}|${shift}|${employeeId}` in an extra shift.
+ */
 export interface TipWorkerDoc extends Doc {
   date: string;
   employeeId: string;
+  /** name of an extra tips shift of that day (none = the day's main shift) */
+  shift?: string;
   /** reinforcement worker: share = hours / full shift */
   reinforcement?: boolean;
   hours?: number;
