@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeek, sortShifts, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
+import { buildWeek, orderedDays, sortShifts, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
 import type { ShiftAssignment, ShiftDay } from './types';
 
 const WEEK = '2026-10-11'; // a Sunday
@@ -39,14 +39,20 @@ describe('buildWeek', () => {
 
   });
 
-  it('keeps the order people were added in, and lets more people than planned in', () => {
+  it('orders people by start time (same start: the order they were added in), and lets more people than planned in', () => {
     const planned: ShiftDay = { id: '2026-10-12', date: '2026-10-12', shifts: [{ ...templateShifts(1)[0], max: 1 }] };
     const rows = [
       { ...a('2026-10-12', 'eve', 'x', '17:00'), order: 1 },
       { ...a('2026-10-12', 'eve', 'bar', '19:00'), order: 2 },
-      { ...a('2026-10-12', 'eve', 'z', '16:30'), order: 3 },
+      { ...a('2026-10-12', 'eve', 'z', '17:00'), order: 3 },
+      { ...a('2026-10-12', 'eve', 'w', '16:30'), order: 4 },
     ];
-    expect(buildWeek(WEEK, [planned], rows)[1].shifts[0].staff.map((s) => s.employeeId)).toEqual(['x', 'bar', 'z']);
+    expect(buildWeek(WEEK, [planned], rows)[1].shifts[0].staff.map((s) => s.employeeId)).toEqual(['w', 'x', 'z', 'bar']);
+  });
+
+  it('reorders an already published week by start time', () => {
+    const shift = { ...templateShifts(4)[0], staff: [{ employeeId: 'ari', start: '17:00' }, { employeeId: 'bar', start: '19:00' }, { employeeId: 'nadin', start: '17:00' }] };
+    expect(orderedDays([{ date: '2026-11-05', shifts: [shift] }])[0].shifts[0].staff.map((s) => s.employeeId)).toEqual(['ari', 'nadin', 'bar']);
   });
 
   it('detects unpublished changes', () => {

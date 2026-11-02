@@ -6,8 +6,8 @@ import { addDays, formatTime, weekStart } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { effectiveShifts, requestKey, weekDates } from '../lib/rota';
 import type { PublishedWeek, ShiftDay, ShiftRequest } from '../lib/types';
-import { Hours, WeekNav, dayTitle, shiftName } from '../components/ShiftBits';
-import { t, tl } from '../lib/i18n';
+import { DayName, Hours, WeekNav, dayTitle, shiftName } from '../components/ShiftBits';
+import { t } from '../lib/i18n';
 
 const FORWARD_WEEKS = 12;
 
@@ -89,8 +89,7 @@ function RequestForm({ week, days, existing, published, save }: { week: string; 
       {published && <p className="banner-warn">{t('הסידור לשבוע הזה כבר פורסם. אפשר עדיין לשלוח בקשה, אבל היא עשויה לא להיכנס.')}</p>}
       {plan.map((d) => (
         <article key={d.date} className="card day-card">
-          <div className="day-head"><strong>{dayTitle(d.date)}</strong></div>
-          {d.note && <p className="day-note">🎉 {tl(d.note, d.noteEn)}</p>}
+          <div className="day-head"><strong>{dayTitle(d.date)}<DayName day={d} /></strong></div>
           {d.shifts.length === 0 && <p className="muted small-text">{t('סגור')}</p>}
           <div className="chips">
             {d.shifts.map((s) => {

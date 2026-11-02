@@ -48,3 +48,8 @@ export function WeekNav({ week, min, max, onChange, current }: { week: string; m
 }
 
 export const dayTitle = (date: string) => formatLongDate(date);
+
+/** The day's title (e.g. a workshop), shown right after the date in a day's heading. */
+export function DayName({ day }: { day: { note?: string; noteEn?: string } }) {
+  return day.note ? <span className="day-name"> · {tl(day.note, day.noteEn)}</span> : null;
+}

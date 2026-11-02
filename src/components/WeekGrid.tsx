@@ -1,7 +1,7 @@
 import type { PublishedDay } from '../lib/types';
 import type { PersonColor } from '../lib/rotaColors';
 import { WEEKDAY_NAMES, weekdayOf } from '../lib/dates';
-import { t } from '../lib/i18n';
+import { t, tl } from '../lib/i18n';
 
 export interface GridPerson {
   id: string;
@@ -34,7 +34,7 @@ export function WeekGrid({ days, people, colorOf, meId, today, asked, selected, 
               <th key={d.date} scope="col" className={`${d.date === today ? 'today' : ''}${d.shifts.length === 0 ? ' closed' : ''}`}>
                 <span className="block">{t(WEEKDAY_NAMES[weekdayOf(d.date)])}</span>
                 <bdi dir="ltr" className="muted">{Number(d.date.slice(8))}/{Number(d.date.slice(5, 7))}</bdi>
-                {d.note && <span className="block" title={d.note}>🎉</span>}
+                {d.note && <span className="block wg-title">{tl(d.note, d.noteEn)}</span>}
               </th>
             ))}
           </tr>

@@ -482,7 +482,7 @@ export const UI: Record<string, string> = {
   "הסידור לשבוע הזה עדיין לא פורסם לצוות": "This week's schedule has not been published to the team yet",
   "הסידור לשבוע הזה עדיין לא פורסם.": "This week's schedule has not been published yet.",
   "הסר": "Remove",
-  "הערה ליום (למשל: טריוויה, קוויר גיים נייט)": "Note for the day (e.g. trivia, queer game night)",
+  "כותרת ליום (מופיעה ליד התאריך, למשל: סדנת מיניאטורות)": "Title of the day (shown next to the date, e.g. miniatures workshop)",
   "הערות למנהל (למשל: רק עד 22:00, לא יכול/ה בשישי)": "Notes for the manager (e.g. only until 22:00, can't do Friday)",
   "העתיקו את הסידור:": "Copy the schedule:",
   "השבוע": "This week",

@@ -9,8 +9,8 @@ import type { PublishedWeek, Settings } from '../lib/types';
 import { personColor } from '../lib/rotaColors';
 import { WeekGrid } from '../components/WeekGrid';
 import { renderWeekImage, shareOrDownload } from '../lib/rotaImage';
-import { Hours, WeekNav, dayTitle, shiftName, weekLabel } from '../components/ShiftBits';
-import { t, tl } from '../lib/i18n';
+import { DayName, Hours, WeekNav, dayTitle, shiftName, weekLabel } from '../components/ShiftBits';
+import { t } from '../lib/i18n';
 
 const BACK_WEEKS = 12;
 const FORWARD_WEEKS = 12;
@@ -119,10 +119,9 @@ export default function SchedulePage() {
           return (
             <article key={d.date} className={`card day-card${mine ? ' mine' : ''}${d.date === today ? ' today' : ''}`}>
               <div className="day-head">
-                <strong>{dayTitle(d.date)}</strong>
+                <strong>{dayTitle(d.date)}<DayName day={d} /></strong>
                 {d.date === today && <span className="chip">{t('היום')}</span>}
               </div>
-              {d.note && <p className="day-note">🎉 {tl(d.note, d.noteEn)}</p>}
               {d.shifts.length === 0 && <p className="muted small-text">{t('סגור')}</p>}
               {d.shifts.map((s) => (
                 <div key={s.id} className="shift-block">

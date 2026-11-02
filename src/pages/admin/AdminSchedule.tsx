@@ -10,8 +10,8 @@ import type { SavedColor } from '../../lib/rotaColors';
 import { fillColors, hexOf, personColor } from '../../lib/rotaColors';
 import { WeekGrid } from '../../components/WeekGrid';
 import { renderWeekImage, shareOrDownload } from '../../lib/rotaImage';
-import { Hours, WeekNav, dayTitle, shiftName } from '../../components/ShiftBits';
-import { pruneEn, t, tl } from '../../lib/i18n';
+import { DayName, Hours, WeekNav, dayTitle, shiftName } from '../../components/ShiftBits';
+import { pruneEn, t } from '../../lib/i18n';
 import { seedSettings } from '../../seed/tasks';
 
 const FORWARD_WEEKS = 26; // events can be announced months ahead
@@ -198,12 +198,11 @@ export default function AdminSchedule() {
         return (
           <article key={d.date} className={`card day-card${d.date === today ? ' today' : ''}`}>
             <div className="day-head">
-              <strong>{dayTitle(d.date)}</strong>
+              <strong>{dayTitle(d.date)}<DayName day={d} /></strong>
               <button type="button" className="small" onClick={() => setEditDay(editing ? null : d.date)}>
                 {editing ? t('סגור') : t('✏️ הגדרות יום')}
               </button>
             </div>
-            {d.note && !editing && <p className="day-note">🎉 {tl(d.note, d.noteEn)}</p>}
             {d.shifts.length === 0 && !editing && <p className="muted small-text">{t('סגור')}</p>}
 
             {editing && (
@@ -326,8 +325,8 @@ function DayEditor({ doc, onSave }: { doc: ShiftDay; onSave(next: ShiftDay, remo
         <span>{t('היום סגור')}</span>
       </label>
       <label>
-        {t('הערה ליום (למשל: טריוויה, קוויר גיים נייט)')}
-        <input value={note} onChange={(e) => setNote(e.target.value)} />
+        {t('כותרת ליום (מופיעה ליד התאריך, למשל: סדנת מיניאטורות)')}
+        <input value={note} maxLength={40} onChange={(e) => setNote(e.target.value)} />
       </label>
       <label>
         {t('גרסה באנגלית (לא חובה)')}

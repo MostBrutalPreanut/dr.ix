@@ -1137,10 +1137,15 @@ a.stock-task {
   gap: 0.5rem;
   flex-wrap: wrap;
 }
-.day-note {
-  margin: 0.3rem 0;
+.day-name {
   color: var(--yellow);
-  font-weight: 700;
+}
+.week-grid .wg-title {
+  max-width: 5.5rem;
+  margin-inline: auto;
+  font-size: 0.7rem;
+  color: var(--yellow);
+  overflow-wrap: anywhere;
 }
 .shift-block {
   margin-top: 0.5rem;
