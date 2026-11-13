@@ -9,6 +9,10 @@ export const MAX_STAFF = 8;
 export const byOrder = (a: Pick<ShiftAssignment, 'order' | 'start' | 'employeeId'>, b: Pick<ShiftAssignment, 'order' | 'start' | 'employeeId'>) =>
   (a.order ?? 0) - (b.order ?? 0) || a.start.localeCompare(b.start) || a.employeeId.localeCompare(b.employeeId);
 
+/** How the team sees a shift: whoever starts earlier comes first; same start time keeps the order people were added in. */
+export const byStart = (a: Pick<ShiftAssignment, 'order' | 'start' | 'employeeId'>, b: Pick<ShiftAssignment, 'order' | 'start' | 'employeeId'>) =>
+  a.start.localeCompare(b.start) || byOrder(a, b);
+
 const EVENING: ShiftDef = { id: 'eve', label: tn('ערב'), from: '17:30', to: '00:00', defaultStart: '17:00', max: MAX_STAFF };
 const SAT_NOON: ShiftDef = { id: 'noon', label: tn('צהריים'), from: '11:00', to: '17:00', defaultStart: '11:00', max: MAX_STAFF };
 const SAT_EVENING: ShiftDef = { ...EVENING, from: '17:00' };
@@ -29,8 +33,9 @@ export function sortShifts<T extends Pick<ShiftDef, 'from' | 'defaultStart'>>(sh
   return [...shifts].sort((a, b) => key(a).localeCompare(key(b)));
 }
 
-/** Published weeks saved before the shifts were ordered still read in the right order. */
-export const orderedDays = (days: PublishedDay[]): PublishedDay[] => days.map((d) => ({ ...d, shifts: sortShifts(d.shifts) }));
+/** Published weeks saved before the shifts / workers were ordered still read in the right order. */
+export const orderedDays = (days: PublishedDay[]): PublishedDay[] =>
+  days.map((d) => ({ ...d, shifts: sortShifts(d.shifts).map((s) => ({ ...s, staff: [...s.staff].sort((a, b) => a.start.localeCompare(b.start)) })) }));
 
 export function effectiveShifts(date: string, day?: Pick<ShiftDay, 'shifts'>): ShiftDef[] {
   return sortShifts(day ? day.shifts : templateShifts(weekdayOf(date)));
@@ -43,7 +48,7 @@ export function weekDates(weekStart: string): string[] {
 export const requestKey = (date: string, shiftId: string) => `${date}|${shiftId}`;
 export const assignmentId = (date: string, shiftId: string, employeeId: string) => `${date}|${shiftId}|${employeeId}`;
 
-/** The week as the team will see it (draft assignments of shifts that still exist, ordered by start time). */
+/** The week as the team will see it (draft assignments of shifts that still exist; shifts and workers ordered by start time). */
 export function buildWeek(weekStart: string, days: ShiftDay[], assignments: ShiftAssignment[], isEmployee: (id: string) => boolean = () => true): PublishedDay[] {
   return weekDates(weekStart).map((date) => {
     const day = days.find((d) => d.date === date);
@@ -51,7 +56,7 @@ export function buildWeek(weekStart: string, days: ShiftDay[], assignments: Shif
       ...s,
       staff: assignments
         .filter((a) => a.date === date && a.shiftId === s.id && isEmployee(a.employeeId))
-        .sort(byOrder)
+        .sort(byStart)
         .map((a) => ({ employeeId: a.employeeId, start: a.start })),
     }));
     const out: PublishedDay = { date, shifts };
