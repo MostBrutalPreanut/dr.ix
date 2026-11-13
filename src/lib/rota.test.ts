@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeek, sortShifts, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
+import { buildWeek, orderedDays, sortShifts, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
 import type { ShiftAssignment, ShiftDay } from './types';
 
 const WEEK = '2026-10-11'; // a Sunday
@@ -39,14 +39,15 @@ describe('buildWeek', () => {
 
   });
 
-  it('keeps the order people were added in, and lets more people than planned in', () => {
+  it('puts earlier starts first (same start keeps the order people were added in), and lets more people than planned in', () => {
     const planned: ShiftDay = { id: '2026-10-12', date: '2026-10-12', shifts: [{ ...templateShifts(1)[0], max: 1 }] };
     const rows = [
       { ...a('2026-10-12', 'eve', 'x', '17:00'), order: 1 },
       { ...a('2026-10-12', 'eve', 'bar', '19:00'), order: 2 },
       { ...a('2026-10-12', 'eve', 'z', '16:30'), order: 3 },
+      { ...a('2026-10-12', 'eve', 'y', '17:00'), order: 4 },
     ];
-    expect(buildWeek(WEEK, [planned], rows)[1].shifts[0].staff.map((s) => s.employeeId)).toEqual(['x', 'bar', 'z']);
+    expect(buildWeek(WEEK, [planned], rows)[1].shifts[0].staff.map((s) => s.employeeId)).toEqual(['z', 'x', 'y', 'bar']);
   });
 
   it('detects unpublished changes', () => {
@@ -82,5 +83,11 @@ describe('shift order', () => {
     expect(sortShifts([late, eve, noon]).map((s) => s.id)).toEqual(['noon', 'eve', 'ev-1']);
     const sat: ShiftDay = { id: '2026-10-17', date: '2026-10-17', shifts: [eve, noon].map((s) => ({ ...s, label: s.id, max: 8 })) };
     expect(buildWeek('2026-10-11', [sat], [])[6].shifts.map((s) => s.id)).toEqual(['noon', 'eve']);
+  });
+
+  it('a week published before workers were ordered shows earlier starts first', () => {
+    const staff = [['tomer', '18:00'], ['anker', '20:00'], ['bar', '20:00'], ['gaia', '18:00']].map(([employeeId, start]) => ({ employeeId, start }));
+    const fri = { date: '2026-11-20', shifts: [{ id: 'eve', label: 'ערב', from: '19:00', to: '00:00', defaultStart: '19:00', max: 8, staff }] };
+    expect(orderedDays([fri])[0].shifts[0].staff.map((s) => s.employeeId)).toEqual(['tomer', 'gaia', 'anker', 'bar']);
   });
 });
