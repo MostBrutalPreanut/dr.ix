@@ -555,5 +555,13 @@ export const UI: Record<string, string> = {
   "🧹 משימות להיום": "🧹 Today's tasks",
   "לבדיקה היום": "To check today",
   "🖼️ ייצוא כתמונה": "🖼️ Export as image",
+  '🔪 הכנות': '🔪 Prep',
+  'בלי שעות, ולא מופיע בסידור שכל הצוות רואה. שולחים בנפרד למי שזה רלוונטי לו.': 'No hours, and not part of the schedule the whole team sees. Send it separately to whoever it concerns.',
+  '+ הוסף': '+ Add',
+  'אין הכנות': 'No prep',
+  'הסר את {name}': 'Remove {name}',
+  '🖼️ ייצוא הכנות כתמונה': '🖼️ Export prep as image',
+  '📋 העתקת הכנות לוואטסאפ': '📋 Copy prep for WhatsApp',
+  'העתיקו את ההכנות:': 'Copy the prep list:',
   "משמרת": "Shift",
 };

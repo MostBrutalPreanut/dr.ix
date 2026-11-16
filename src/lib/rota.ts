@@ -118,3 +118,40 @@ export function weekText(days: PublishedDay[], nameOf: (id: string) => string): 
   }
   return lines.join('\n').trim();
 }
+
+// ---------- prep ("הכנות") ----------
+// Prep work has no hours and is not part of the team's schedule: it is saved as draft assignments with this
+// shift id (a shift no day has, so it never reaches the published week) and sent on its own to whoever it concerns.
+
+export const PREP_ID = 'prep';
+export const isPrep = (a: Pick<ShiftAssignment, 'shiftId'>) => a.shiftId === PREP_ID;
+
+export interface PrepDay {
+  date: string;
+  staff: string[];
+}
+
+/** Who does prep on each day of the week (any day, also a closed one), in the order they were added. */
+export function prepWeek(weekStart: string, assignments: ShiftAssignment[], isEmployee: (id: string) => boolean = () => true): PrepDay[] {
+  return weekDates(weekStart).map((date) => ({
+    date,
+    staff: assignments.filter((a) => a.date === date && isPrep(a) && isEmployee(a.employeeId)).sort(byOrder).map((a) => a.employeeId),
+  }));
+}
+
+/** The prep days as week days with one hour-less "הכנות" shift, so they can be drawn like the schedule. Empty days are left out. */
+export const prepAsDays = (days: PrepDay[]): PublishedDay[] =>
+  days
+    .filter((d) => d.staff.length > 0)
+    .map((d) => ({ date: d.date, shifts: [{ id: PREP_ID, label: 'הכנות', defaultStart: '', max: MAX_STAFF, staff: d.staff.map((employeeId) => ({ employeeId, start: '' })) }] }));
+
+/** Plain text of the week's prep for WhatsApp (Hebrew only). */
+export function prepText(days: PrepDay[], nameOf: (id: string) => string): string {
+  const lines = ['*הכנות*', ''];
+  for (const d of days.filter((x) => x.staff.length > 0)) {
+    lines.push(`*${WEEKDAY_NAMES[weekdayOf(d.date)]} ${shortDate(d.date)}*`);
+    for (const id of d.staff) lines.push(`• ${nameOf(id)}`);
+    lines.push('');
+  }
+  return lines.join('\n').trim();
+}

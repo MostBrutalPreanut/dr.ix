@@ -4,8 +4,9 @@ import { useAuth } from '../../lib/auth';
 import { backend, idPrefix, newId, useCollection } from '../../lib/db';
 import { addDays, formatLongDate, weekStart } from '../../lib/dates';
 import { useBusinessDate } from '../../lib/useBusinessDate';
-import { MAX_STAFF, START_CHOICES, assignmentId, buildWeek, byOrder, effectiveShifts, hasUnpublishedChanges, isTime, requestKey, templateShifts } from '../../lib/rota';
+import { MAX_STAFF, PREP_ID, START_CHOICES, assignmentId, buildWeek, byOrder, effectiveShifts, hasUnpublishedChanges, isPrep, isTime, prepAsDays, prepText, prepWeek, requestKey, templateShifts } from '../../lib/rota';
 import type { PublishedDay, PublishedWeek, Settings, ShiftAssignment, ShiftDay, ShiftDef, ShiftRequest } from '../../lib/types';
+import type { PrepDay } from '../../lib/rota';
 import type { SavedColor } from '../../lib/rotaColors';
 import { fillColors, hexOf, personColor } from '../../lib/rotaColors';
 import { WeekGrid } from '../../components/WeekGrid';
@@ -78,10 +79,10 @@ export default function AdminSchedule() {
     return dayDocs.save(doc).then(() => upcoming.save(doc).catch(() => undefined));
   };
 
-  /** Removes the draft assignments of a day whose shift no longer exists. */
+  /** Removes the draft assignments of a day whose shift no longer exists (prep is not a shift of the day and stays). */
   async function dropAssignments(date: string, keepShiftIds: string[]) {
     const rows = (await backend.list('shiftAssign', { from: date, to: `${date}~` })) as ShiftAssignment[];
-    await Promise.all(rows.filter((a) => !keepShiftIds.includes(a.shiftId)).map((a) => backend.remove('shiftAssign', a.id)));
+    await Promise.all(rows.filter((a) => !isPrep(a) && !keepShiftIds.includes(a.shiftId)).map((a) => backend.remove('shiftAssign', a.id)));
   }
 
   const assign = (date: string, shift: ShiftDef, employeeId: string) =>
@@ -167,7 +168,7 @@ export default function AdminSchedule() {
           onCell={(date, employeeId) => {
             setCell({ date, employeeId });
             const day = draft.find((x) => x.date === date);
-            const mine = assigns.items.some((a) => a.date === date && a.employeeId === employeeId);
+            const mine = assigns.items.some((a) => a.date === date && a.employeeId === employeeId && !isPrep(a));
             // a day with a single shift: one tap puts the person in it
             if (day && day.shifts.length === 1 && !mine) void assign(date, effectiveShifts(date, dayDoc(date))[0], employeeId);
           }}
@@ -238,6 +239,15 @@ export default function AdminSchedule() {
           </article>
         );
       })}
+
+      <PrepSection
+        days={prepWeek(week, assigns.items, isEmployee)}
+        people={[...employees].sort((a, b) => a.name.localeCompare(b.name, 'he'))}
+        colorOf={colorOf}
+        nameOf={nameOf}
+        onAdd={(date, id) => guard(() => assigns.save({ id: assignmentId(date, PREP_ID, id), date, shiftId: PREP_ID, employeeId: id, start: '', order: Date.now() }))}
+        onRemove={(date, id) => guard(() => assigns.remove(assignmentId(date, PREP_ID, id)))}
+      />
 
       <EventsSection
         today={today}
@@ -372,6 +382,75 @@ function DayEditor({ doc, onSave }: { doc: ShiftDay; onSave(next: ShiftDay, remo
         {t('שמור יום')}
       </button>
     </div>
+  );
+}
+
+/**
+ * Prep ("הכנות"): who does prep on which day, without hours. It is not part of the team's schedule:
+ * it is sent on its own (image / text) to whoever it concerns.
+ */
+function PrepSection({ days, people, colorOf, nameOf, onAdd, onRemove }: {
+  days: PrepDay[];
+  people: { id: string; name: string }[];
+  colorOf(id: string): { background: string; color: string };
+  nameOf(id: string): string;
+  onAdd(date: string, employeeId: string): Promise<void>;
+  onRemove(date: string, employeeId: string): Promise<void>;
+}) {
+  const [open, setOpen] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const any = days.some((d) => d.staff.length > 0);
+  const exportImage = () => renderWeekImage(prepAsDays(days), colorOf, nameOf).then((b) => shareOrDownload(b, `prep-${days[0].date}.png`)).catch(() => undefined);
+  async function copy() {
+    const text = prepText(days, nameOf);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      window.prompt(t('העתיקו את ההכנות:'), text);
+    }
+  }
+  return (
+    <section>
+      <h2>{t('🔪 הכנות')}</h2>
+      <p className="muted small-text">{t('בלי שעות, ולא מופיע בסידור שכל הצוות רואה. שולחים בנפרד למי שזה רלוונטי לו.')}</p>
+      <div className="card">
+        {days.map((d) => {
+          const adding = open === d.date;
+          const free = people.filter((p) => !d.staff.includes(p.id));
+          return (
+            <div key={d.date} className="shift-block">
+              <div className="row between">
+                <strong>{dayTitle(d.date)}</strong>
+                <button type="button" className="small" onClick={() => setOpen(adding ? null : d.date)}>{adding ? t('סגור') : t('+ הוסף')}</button>
+              </div>
+              <div className="chips">
+                {d.staff.length === 0 && <span className="muted small-text">{t('אין הכנות')}</span>}
+                {d.staff.map((id) => (
+                  <button key={id} type="button" className="chip pick on" aria-label={t('הסר את {name}', { name: nameOf(id) })} onClick={() => void onRemove(d.date, id)}>
+                    <span className="name-dot" style={colorOf(id)} aria-hidden="true" />{nameOf(id)} ✕
+                  </button>
+                ))}
+              </div>
+              {adding && (
+                <div className="chips" style={{ marginTop: '.4rem' }}>
+                  {free.map((p) => (
+                    <button key={p.id} type="button" className="chip pick" onClick={() => void onAdd(d.date, p.id)}>
+                      <span className="name-dot" style={colorOf(p.id)} aria-hidden="true" />{p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="row">
+        <button type="button" className="chip pick" disabled={!any} onClick={() => void exportImage()}>{t('🖼️ ייצוא הכנות כתמונה')}</button>
+        <button type="button" className="chip pick" disabled={!any} onClick={() => void copy()}>{copied ? t('✓ הועתק') : t('📋 העתקת הכנות לוואטסאפ')}</button>
+      </div>
+    </section>
   );
 }
 
