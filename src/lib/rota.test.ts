@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWeek, orderedDays, sortShifts, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
+import { buildWeek, orderedDays, prepAsDays, prepText, prepWeek, sortShifts, dayHeading, exportDays, effectiveShifts, hasUnpublishedChanges, myShifts, templateShifts, weekDates, weekText } from './rota';
 import type { ShiftAssignment, ShiftDay } from './types';
 
 const WEEK = '2026-10-11'; // a Sunday
@@ -89,5 +89,19 @@ describe('shift order', () => {
     const staff = [['tomer', '18:00'], ['anker', '20:00'], ['bar', '20:00'], ['gaia', '18:00']].map(([employeeId, start]) => ({ employeeId, start }));
     const fri = { date: '2026-11-20', shifts: [{ id: 'eve', label: 'ערב', from: '19:00', to: '00:00', defaultStart: '19:00', max: 8, staff }] };
     expect(orderedDays([fri])[0].shifts[0].staff.map((s) => s.employeeId)).toEqual(['tomer', 'gaia', 'anker', 'bar']);
+  });
+});
+
+describe('prep', () => {
+  const prep = (date: string, employeeId: string, order: number) => ({ ...a(date, 'prep', employeeId, ''), order });
+  it('is kept out of the team\'s week, any day can have it, and it prints without hours', () => {
+    const rows = [a('2026-10-12', 'eve', 'a', '17:00'), prep('2026-10-12', 'b', 2), prep('2026-10-12', 'c', 1), prep('2026-10-11', 'a', 3)];
+    const week = buildWeek(WEEK, [], rows);
+    expect(week.flatMap((d) => d.shifts.flatMap((s) => s.staff.map((w) => w.employeeId)))).toEqual(['a']);
+    const days = prepWeek(WEEK, rows);
+    expect(days[0]).toEqual({ date: '2026-10-11', staff: ['a'] }); // Sunday, a closed day
+    expect(days[1].staff).toEqual(['c', 'b']);
+    expect(prepAsDays(days).map((d) => d.date)).toEqual(['2026-10-11', '2026-10-12']);
+    expect(prepText(days, (id) => id.toUpperCase())).toBe('*הכנות*\n\n*ראשון 11.10*\n• A\n\n*שני 12.10*\n• C\n• B');
   });
 });

@@ -69,7 +69,7 @@ export function renderWeekImage(days: PublishedDay[], colorOf: (id: string) => P
       if (s.staff.length === 0) cell(staffX, y, STAFF_W, ROW, '#fff');
       s.staff.forEach((w, j) => {
         const c = colorOf(w.employeeId);
-        cell(staffX, y + j * ROW, STAFF_W, ROW, c.background, [{ text: `${nameOf(w.employeeId)} ${w.start}`, color: c.color, bold: true }]);
+        cell(staffX, y + j * ROW, STAFF_W, ROW, c.background, [{ text: [nameOf(w.employeeId), w.start].filter(Boolean).join(' '), color: c.color, bold: true }]);
       });
       row += n;
     }
