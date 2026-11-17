@@ -124,6 +124,10 @@ export function weekText(days: PublishedDay[], nameOf: (id: string) => string): 
 // shift id (a shift no day has, so it never reaches the published week) and sent on its own to whoever it concerns.
 
 export const PREP_ID = 'prep';
+/** Days prep is usually done on (Sunday, Monday, Wednesday); another day can be added for a week. */
+export const PREP_WEEKDAYS = [0, 1, 3];
+/** The people who do prep (Elad, Midori, Nadin), by employee id. */
+export const PREP_PEOPLE = ['elad', 'midori', 'nadin'];
 export const isPrep = (a: Pick<ShiftAssignment, 'shiftId'>) => a.shiftId === PREP_ID;
 
 export interface PrepDay {
