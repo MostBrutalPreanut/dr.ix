@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { backend, idPrefix, newId, useCollection } from '../../lib/db';
-import { addDays, formatLongDate, weekStart } from '../../lib/dates';
+import { addDays, formatLongDate, weekStart, weekdayOf } from '../../lib/dates';
 import { useBusinessDate } from '../../lib/useBusinessDate';
-import { MAX_STAFF, PREP_ID, START_CHOICES, assignmentId, buildWeek, byOrder, effectiveShifts, hasUnpublishedChanges, isPrep, isTime, prepAsDays, prepText, prepWeek, requestKey, templateShifts } from '../../lib/rota';
+import { MAX_STAFF, PREP_ID, PREP_PEOPLE, PREP_WEEKDAYS, START_CHOICES, assignmentId, buildWeek, byOrder, effectiveShifts, hasUnpublishedChanges, isPrep, isTime, prepAsDays, prepText, prepWeek, requestKey, templateShifts } from '../../lib/rota';
 import type { PublishedDay, PublishedWeek, Settings, ShiftAssignment, ShiftDay, ShiftDef, ShiftRequest } from '../../lib/types';
 import type { PrepDay } from '../../lib/rota';
 import type { SavedColor } from '../../lib/rotaColors';
@@ -241,6 +241,7 @@ export default function AdminSchedule() {
       })}
 
       <PrepSection
+        key={week}
         days={prepWeek(week, assigns.items, isEmployee)}
         people={[...employees].sort((a, b) => a.name.localeCompare(b.name, 'he'))}
         colorOf={colorOf}
@@ -387,7 +388,8 @@ function DayEditor({ doc, onSave }: { doc: ShiftDay; onSave(next: ShiftDay, remo
 
 /**
  * Prep ("הכנות"): who does prep on which day, without hours. It is not part of the team's schedule:
- * it is sent on its own (image / text) to whoever it concerns.
+ * it is sent on its own (image / text) to whoever it concerns. The usual prep days are listed;
+ * another day of the week can be added at the bottom.
  */
 function PrepSection({ days, people, colorOf, nameOf, onAdd, onRemove }: {
   days: PrepDay[];
@@ -397,8 +399,12 @@ function PrepSection({ days, people, colorOf, nameOf, onAdd, onRemove }: {
   onAdd(date: string, employeeId: string): Promise<void>;
   onRemove(date: string, employeeId: string): Promise<void>;
 }) {
-  const [open, setOpen] = useState<string | null>(null);
+  const [extra, setExtra] = useState<string[]>([]);
+  const [picking, setPicking] = useState(false);
   const [copied, setCopied] = useState(false);
+  const shown = days.filter((d) => PREP_WEEKDAYS.includes(weekdayOf(d.date)) || d.staff.length > 0 || extra.includes(d.date));
+  const hidden = days.filter((d) => !shown.includes(d));
+  const preppers = people.filter((p) => PREP_PEOPLE.includes(p.id));
   const any = days.some((d) => d.staff.length > 0);
   const exportImage = () => renderWeekImage(prepAsDays(days), colorOf, nameOf).then((b) => shareOrDownload(b, `prep-${days[0].date}.png`)).catch(() => undefined);
   async function copy() {
@@ -416,35 +422,40 @@ function PrepSection({ days, people, colorOf, nameOf, onAdd, onRemove }: {
       <h2>{t('🔪 הכנות')}</h2>
       <p className="muted small-text">{t('בלי שעות, ולא מופיע בסידור שכל הצוות רואה. שולחים בנפרד למי שזה רלוונטי לו.')}</p>
       <div className="card">
-        {days.map((d) => {
-          const adding = open === d.date;
-          const free = people.filter((p) => !d.staff.includes(p.id));
+        <p className="muted small-text">{t('לוחצים על שם כדי לסמן מי עושה הכנות (✓ = מסומן). לחיצה נוספת מסירה.')}</p>
+        {shown.map((d) => {
+          // the usual prep people, plus anyone already marked on this day
+          const who = [...preppers.map((p) => p.id), ...d.staff.filter((id) => !PREP_PEOPLE.includes(id))];
           return (
             <div key={d.date} className="shift-block">
-              <div className="row between">
-                <strong>{dayTitle(d.date)}</strong>
-                <button type="button" className="small" onClick={() => setOpen(adding ? null : d.date)}>{adding ? t('סגור') : t('+ הוסף')}</button>
-              </div>
+              <strong>{dayTitle(d.date)}</strong>
               <div className="chips">
-                {d.staff.length === 0 && <span className="muted small-text">{t('אין הכנות')}</span>}
-                {d.staff.map((id) => (
-                  <button key={id} type="button" className="chip pick on" aria-label={t('הסר את {name}', { name: nameOf(id) })} onClick={() => void onRemove(d.date, id)}>
-                    <span className="name-dot" style={colorOf(id)} aria-hidden="true" />{nameOf(id)} ✕
-                  </button>
-                ))}
-              </div>
-              {adding && (
-                <div className="chips" style={{ marginTop: '.4rem' }}>
-                  {free.map((p) => (
-                    <button key={p.id} type="button" className="chip pick" onClick={() => void onAdd(d.date, p.id)}>
-                      <span className="name-dot" style={colorOf(p.id)} aria-hidden="true" />{p.name}
+                {who.map((id) => {
+                  const on = d.staff.includes(id);
+                  return (
+                    <button key={id} type="button" className={`chip pick${on ? ' on' : ''}`} aria-pressed={on} onClick={() => void (on ? onRemove(d.date, id) : onAdd(d.date, id))}>
+                      <span className="name-dot" style={colorOf(id)} aria-hidden="true" />{on ? '✓ ' : ''}{nameOf(id)}
                     </button>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </div>
           );
         })}
+        {hidden.length > 0 && (
+          <div className="shift-block">
+            <button type="button" className="small" onClick={() => setPicking(!picking)}>{picking ? t('סגור') : t('+ הוספת יום')}</button>
+            {picking && (
+              <div className="chips" style={{ marginTop: '.4rem' }}>
+                {hidden.map((d) => (
+                  <button key={d.date} type="button" className="chip pick" onClick={() => { setExtra([...extra, d.date]); setPicking(false); }}>
+                    {dayTitle(d.date)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="row">
         <button type="button" className="chip pick" disabled={!any} onClick={() => void exportImage()}>{t('🖼️ ייצוא הכנות כתמונה')}</button>
