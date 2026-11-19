@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitTips } from './tips';
+import { splitTips, wholeShekelsDown } from './tips';
 import { addDays, businessDate, weekIndex, weekdayOf } from './dates';
 import { dueTasks, isScheduledOn, completionId } from './schedule';
 import { recommend } from './games';
@@ -315,5 +315,14 @@ describe('tips by day and month', () => {
     expect(tipWorkerId('2026-10-05', '', 'a')).toBe('2026-10-05|a');
     expect(tipWorkerId('2026-10-05', 'ערב', 'a')).toBe('2026-10-05|ערב|a');
     expect(cleanShiftName(' ערב | ~ שני ')).toBe('ערב שני');
+  });
+});
+
+describe('own tips shown to an employee', () => {
+  it('sums the days and always rounds down to whole shekels', () => {
+    expect(wholeShekelsDown([])).toBe(0);
+    expect(wholeShekelsDown([{ amount: 33.33 }, { amount: 33.33 }, { amount: 33.33 }])).toBe(99);
+    expect(wholeShekelsDown([{ amount: 49.99 }])).toBe(49);
+    expect(wholeShekelsDown([{ amount: 0.1 }, { amount: 0.2 }, { amount: 99.7 }])).toBe(100);
   });
 });

@@ -6,3 +6,4 @@ dist
 dist-local
 dist-*
 .env.mock
+*.log

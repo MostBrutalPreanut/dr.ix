@@ -1321,3 +1321,10 @@ input[type='color'].color-pick {
   background: none;
   cursor: pointer;
 }
+
+/* a single amount shown large (the employee's own tips of the week) */
+.big-number {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.4rem 0;
+}

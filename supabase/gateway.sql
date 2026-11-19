@@ -469,6 +469,77 @@ begin
 end;
 $fn$;
 
+-- ---------- tips: an employee's own share ------------------------------------------
+-- The amounts (tipEntries) stay manager-only. This returns only the caller's own share, per tips shift,
+-- split exactly like src/lib/tips.ts: per tips shift (key '' = the day's main shift), regular workers an equal
+-- share, a reinforcement worker hours / full shift (8, Saturday 14), agorot-exact with the largest remainder.
+
+create or replace function public.api_my_tips(p_token text, p_from text, p_to text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $fn$
+declare
+  e public.employees := public._auth(p_token);
+begin
+  if p_from is null or p_to is null or p_from !~ '^\d{4}-\d{2}-\d{2}$' or p_to !~ '^\d{4}-\d{2}-\d{2}$'
+     or p_to::date - p_from::date not between 0 and 62 then
+    raise exception 'invalid range';
+  end if;
+  return coalesce((
+    with w as (
+      select d.id,
+             d.data ->> 'date' as day,
+             coalesce(d.data ->> 'shift', '') as shift,
+             d.data ->> 'employeeId' as emp,
+             coalesce((d.data ->> 'reinforcement')::boolean, false) as reinf,
+             (d.data ->> 'hours')::numeric as hours
+      from public.docs d
+      where d.collection = 'tipWorkers' and d.id >= p_from and d.id <= p_to || '~'
+    ),
+    mine as (select distinct day, shift from w where emp = e.id),
+    tot as (
+      select d.data ->> 'date' as day, coalesce(d.data ->> 'shift', '') as shift,
+             round(sum((d.data ->> 'amount')::numeric * 100)) as agorot
+      from public.docs d
+      where d.collection = 'tipEntries' and d.id >= p_from and d.id <= p_to || '~'
+      group by 1, 2
+      having round(sum((d.data ->> 'amount')::numeric * 100)) > 0
+    ),
+    ww as (
+      select w.*, t.agorot,
+             case when w.reinf
+               then greatest(0, coalesce(w.hours, f.full_hours)) / f.full_hours
+               else 1 end as weight
+      from w
+      join mine using (day, shift)
+      join tot t using (day, shift)
+      cross join lateral (select case when extract(dow from w.day::date) = 6 then 14.0 else 8.0 end as full_hours) f
+    ),
+    ex as (
+      select ww.*,
+             case when sum(weight) over g > 0 then agorot * weight / sum(weight) over g else 0 end as exact
+      from ww
+      window g as (partition by day, shift)
+    ),
+    fl as (select ex.*, floor(exact) as base, exact - floor(exact) as frac from ex),
+    rk as (
+      select fl.*,
+             agorot - sum(base) over g as remainder,
+             row_number() over (partition by day, shift order by frac desc, id collate "C") as rn
+      from fl
+      window g as (partition by day, shift)
+    )
+    select jsonb_agg(jsonb_build_object('date', day, 'shift', shift,
+                                        'amount', (base + case when rn <= remainder then 1 else 0 end) / 100.0)
+                     order by day, shift)
+    from rk
+    where emp = e.id
+  ), '[]'::jsonb);
+end;
+$fn$;
+
 -- ---------- who may call what -------------------------------------------------------
 
 revoke execute on all functions in schema public from public, anon, authenticated;
@@ -488,5 +559,6 @@ grant execute on function
   public.api_remove_employee(text, text),
   public.api_list(text, text, text, text),
   public.api_upsert(text, text, jsonb),
-  public.api_remove(text, text, text)
+  public.api_remove(text, text, text),
+  public.api_my_tips(text, text, text)
 to anon, authenticated;
