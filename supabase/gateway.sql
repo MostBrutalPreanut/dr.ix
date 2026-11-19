@@ -470,7 +470,7 @@ end;
 $fn$;
 
 -- ---------- tips: an employee's own share ------------------------------------------
--- The amounts (tipEntries) stay manager-only. This returns only the caller's own share, per business day,
+-- The amounts (tipEntries) stay manager-only. This returns only the caller's own share, per tips shift,
 -- split exactly like src/lib/tips.ts: per tips shift (key '' = the day's main shift), regular workers an equal
 -- share, a reinforcement worker hours / full shift (8, Saturday 14), agorot-exact with the largest remainder.
 
@@ -505,6 +505,7 @@ begin
       from public.docs d
       where d.collection = 'tipEntries' and d.id >= p_from and d.id <= p_to || '~'
       group by 1, 2
+      having round(sum((d.data ->> 'amount')::numeric * 100)) > 0
     ),
     ww as (
       select w.*, t.agorot,
@@ -530,13 +531,11 @@ begin
       from fl
       window g as (partition by day, shift)
     )
-    select jsonb_agg(jsonb_build_object('date', day, 'amount', agorot_sum / 100.0) order by day)
-    from (
-      select day, sum(base + case when rn <= remainder then 1 else 0 end) as agorot_sum
-      from rk
-      where emp = e.id
-      group by day
-    ) mine_days
+    select jsonb_agg(jsonb_build_object('date', day, 'shift', shift,
+                                        'amount', (base + case when rn <= remainder then 1 else 0 end) / 100.0)
+                     order by day, shift)
+    from rk
+    where emp = e.id
   ), '[]'::jsonb);
 end;
 $fn$;

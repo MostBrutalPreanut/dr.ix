@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { backend, idPrefix, newId, useCollection } from '../lib/db';
-import { WEEKDAY_NAMES, addDays, formatLongDate, formatTime, weekStart, weekdayOf } from '../lib/dates';
+import { WEEKDAY_NAMES, addDays, formatLongDate, formatTime, weekdayOf } from '../lib/dates';
 import { useBusinessDate } from '../lib/useBusinessDate';
 import { cleanShiftName, dayTips, fullShiftHours, monthDays, shiftsOf, tipWorkerId, totalsByPerson, wholeShekelsDown } from '../lib/tips';
-import type { DayTips, MyDayTips } from '../lib/tips';
+import type { DayTips, MyShiftTips } from '../lib/tips';
 import { myTips } from '../lib/myTips';
 import { poll } from '../lib/gateway';
-import { weekLabel } from '../components/ShiftBits';
 import type { TipEntry, TipWorkerDoc } from '../lib/types';
 import { getLang, t, tn } from '../lib/i18n';
 
@@ -25,7 +24,7 @@ const monthLabel = (month: string) =>
 const shortDate = (d: string) => `${d.slice(8)}/${d.slice(5, 7)}`;
 
 /**
- * Employees ENTER tips (an amount, and who worked) and see their own share of a week, rounded down to
+ * Employees ENTER tips (an amount, and who worked) and see their own share this month, rounded down to
  * whole shekels. The amounts, the totals and the split are for managers: the server does not hand the
  * amounts to a non-manager (collection tipEntries is manager-read), only the person's own share (api_my_tips).
  */
@@ -321,19 +320,16 @@ function StaffTips() {
 
       <WorkersPicker date={date} shift={shift} hint={shifts.length > 1 ? t('מסמנים את כל מי שעבד במשמרת הזו.') : t('מסמנים את כל מי שעבד באותו יום.')} />
 
-      <MyWeekTips today={today} refresh={added.length} />
+      <MyMonthTips today={today} refresh={added.length} />
     </>
   );
 }
 
-const MY_TIPS_BACK_WEEKS = 8;
-
-/** The person's own tips for a week (Sunday to Saturday), always rounded down to whole shekels. */
-function MyWeekTips({ today, refresh }: { today: string; refresh: number }) {
+/** The person's own tips this month, always rounded down to whole shekels, and how many shifts they come from. */
+function MyMonthTips({ today, refresh }: { today: string; refresh: number }) {
   const { user } = useAuth();
-  const thisWeek = weekStart(today);
-  const [week, setWeek] = useState(thisWeek);
-  const [days, setDays] = useState<MyDayTips[] | null>(null);
+  const month = today.slice(0, 7);
+  const [rows, setRows] = useState<MyShiftTips[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
   // refreshed like the rest of the app, so marking who worked shows up without leaving the page
@@ -341,33 +337,23 @@ function MyWeekTips({ today, refresh }: { today: string; refresh: number }) {
     return poll(() => setTick((n) => n + 1));
   }, []);
   useEffect(() => {
-    setDays(null);
-  }, [week]);
-  useEffect(() => {
     let live = true;
-    myTips(week, addDays(week, 6), user!.id)
-      .then((d) => { if (live) { setDays(d); setFailed(false); } })
+    myTips(`${month}-01`, today, user!.id)
+      .then((d) => { if (live) { setRows(d); setFailed(false); } })
       .catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
-  }, [week, refresh, tick, user]);
-  const worked = (days ?? []).filter((d) => Number(d.amount) > 0);
+  }, [month, today, refresh, tick, user]);
   return (
     <section className="card">
       <h2>{t('💰 הטיפים שלי')}</h2>
-      <div className="row between" style={{ flexWrap: 'nowrap' }}>
-        <button type="button" className="small" disabled={week <= addDays(thisWeek, -7 * MY_TIPS_BACK_WEEKS)} onClick={() => setWeek(addDays(week, -7))} aria-label={t('השבוע הקודם')}>{t('→')}</button>
-        <strong style={{ textAlign: 'center' }}>{weekLabel(week)}{week === thisWeek ? ` · ${t('השבוע')}` : ''}</strong>
-        <button type="button" className="small" disabled={week >= thisWeek} onClick={() => setWeek(addDays(week, 7))} aria-label={t('השבוע הבא')}>{t('←')}</button>
-      </div>
+      <p className="muted">{monthLabel(month)}</p>
       {failed && <p className="muted">{t('לא הצלחנו לטעון. נסו שוב מאוחר יותר.')}</p>}
-      {!failed && days === null && <p className="muted">{t('טוען…')}</p>}
-      {!failed && days !== null && (
+      {!failed && rows === null && <p className="muted">{t('טוען…')}</p>}
+      {!failed && rows !== null && (
         <>
-          <p className="big-number">{money(wholeShekelsDown(days))}</p>
-          {worked.length > 0 && (
-            <p className="small-text">{t('ימים:')} {worked.map((d) => `${t(WEEKDAY_NAMES[weekdayOf(d.date)])} ${shortDate(d.date)}`).join(', ')}</p>
-          )}
-          <p className="muted small-text">{t('מעוגל כלפי מטה לשקל שלם. נכללים רק ימים שבהם סומנת כעובד/ת ושכבר הוזן בהם סכום.')}</p>
+          <p className="big-number">{money(wholeShekelsDown(rows))}</p>
+          <p>{rows.length === 1 ? t('ממשמרת אחת') : t('מ-{n} משמרות', { n: rows.length })}</p>
+          <p className="muted small-text">{t('מעוגל כלפי מטה לשקל שלם. נספרות רק משמרות שבהן סומנת כעובד/ת ושכבר הוזן בהן סכום.')}</p>
         </>
       )}
     </section>

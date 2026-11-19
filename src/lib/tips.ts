@@ -137,12 +137,13 @@ export function totalsByPerson(days: DayTips[]): Record<string, number> {
   return Object.fromEntries(Object.entries(agorot).map(([id, a]) => [id, a / 100]));
 }
 
-/** One day of a person's own share (what api_my_tips hands an employee). */
-export interface MyDayTips {
+/** A person's own share of one tips shift (what api_my_tips hands an employee). '' = the day's main shift. */
+export interface MyShiftTips {
   date: string;
+  shift: string;
   amount: number;
 }
 
 /** What an employee is shown: the sum, always rounded down to whole shekels. */
-export const wholeShekelsDown = (days: MyDayTips[]): number =>
+export const wholeShekelsDown = (days: Pick<MyShiftTips, 'amount'>[]): number =>
   Math.floor(days.reduce((n, d) => n + Math.round(Number(d.amount) * 100), 0) / 100);

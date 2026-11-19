@@ -321,8 +321,8 @@ describe('tips by day and month', () => {
 describe('own tips shown to an employee', () => {
   it('sums the days and always rounds down to whole shekels', () => {
     expect(wholeShekelsDown([])).toBe(0);
-    expect(wholeShekelsDown([{ date: 'a', amount: 33.33 }, { date: 'b', amount: 33.33 }, { date: 'c', amount: 33.33 }])).toBe(99);
-    expect(wholeShekelsDown([{ date: 'a', amount: 49.99 }])).toBe(49);
-    expect(wholeShekelsDown([{ date: 'a', amount: 0.1 }, { date: 'b', amount: 0.2 }, { date: 'c', amount: 99.7 }])).toBe(100);
+    expect(wholeShekelsDown([{ amount: 33.33 }, { amount: 33.33 }, { amount: 33.33 }])).toBe(99);
+    expect(wholeShekelsDown([{ amount: 49.99 }])).toBe(49);
+    expect(wholeShekelsDown([{ amount: 0.1 }, { amount: 0.2 }, { amount: 99.7 }])).toBe(100);
   });
 });
